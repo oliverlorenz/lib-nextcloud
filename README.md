@@ -1,11 +1,11 @@
-# <REPO_NAME>
+# lib-ffmpg
 
 a description
 
 ## Installation
 
-To install <REPO_NAME>, use npm:
+To install lib-ffmpg, use npm:
 
 ```bash
-npm install @oliverlorenz/<REPO_NAME>
+npm install @oliverlorenz/lib-ffmpg
 ```
