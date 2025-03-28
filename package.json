@@ -1,5 +1,5 @@
 {
-  "name": "@oliverlorenz/lib-ffmpg",
+  "name": "@oliverlorenz/lib-nextcloud",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -15,15 +15,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oliverlorenz/lib-ffmpg.git"
+    "url": "git+https://github.com/oliverlorenz/lib-nextcloud.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/oliverlorenz/lib-ffmpg/issues"
+    "url": "https://github.com/oliverlorenz/lib-nextcloud/issues"
   },
-  "homepage": "https://github.com/oliverlorenz/lib-ffmpg#readme",
+  "homepage": "https://github.com/oliverlorenz/lib-nextcloud#readme",
   "description": "",
   "engines": {
     "node": ">=22.0.0"
