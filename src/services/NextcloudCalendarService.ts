@@ -4,21 +4,18 @@ const IcalExpander = require("ical-expander");
 export class NextcloudCalendarService {
   constructor(private nextcloudCommonService: NextcloudHeaderService) {}
 
-  async getEvents(
+  public async getEvents(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
     calendarName: string,
     start?: Date,
     end?: Date,
-  ) {
+  ): Promise<{ start: Date; title: string }[]> {
     const response = await fetch(
       `${ncBasePath}/remote.php/dav/calendars/${ncUsername}/${calendarName}?export`,
       {
-        headers: this.nextcloudCommonService.getHeaders(
-          ncUsername,
-          ncAppPassword,
-        ),
+        headers: this.nextcloudCommonService.getHeaders(ncUsername, ncAppPassword),
       },
     );
     const ics = await response.text();
@@ -52,7 +49,7 @@ export class NextcloudCalendarService {
     return mappedEvents.concat(mappedOccurrences);
   }
 
-  async isEventInTimeframe(
+  public async isEventInTimeframe(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
@@ -60,7 +57,7 @@ export class NextcloudCalendarService {
     eventTitle: RegExp,
     start: Date,
     end: Date,
-  ) {
+  ): Promise<boolean> {
     const allEvents = await this.getEvents(
       ncBasePath,
       ncUsername,

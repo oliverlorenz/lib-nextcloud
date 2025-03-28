@@ -3,97 +3,85 @@ import {
   NextcloudPollConfiguration,
   NextcloudPollShowResults,
   NextcloudPollType,
-} from "../types";
-import { NextcloudHeaderService } from "./NextcloudHeaderService";
+} from '../types';
 
 export class NextcloudPollService {
-  constructor(private nextcloudCommonService: NextcloudHeaderService) {}
-
-  async createTextPoll(
+  public async createTextPoll(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
     title: string,
     options: string[],
     config: NextcloudPollConfiguration,
-  ) {
-    const rawResponse = await fetch(
-      `${ncBasePath}/index.php/apps/polls/api/v1.0/poll`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json;charset=utf-8",
-          Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-          accept: "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          type: NextcloudPollType.TEXT,
-          access: config?.access || NextcloudPollAccess.OPEN,
-          showResults: config?.showResults || NextcloudPollShowResults.ALWAYS,
-          expiresAt: config?.expire,
-        }),
+  ): Promise<string> {
+    const rawResponse = await fetch(`${ncBasePath}/index.php/apps/polls/api/v1.0/poll`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json;charset=utf-8',
+        Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
+        accept: 'application/json',
       },
-    );
+      body: JSON.stringify({
+        title,
+        type: NextcloudPollType.TEXT,
+        access: config?.access || NextcloudPollAccess.OPEN,
+        showResults: config?.showResults || NextcloudPollShowResults.ALWAYS,
+        expiresAt: config?.expire,
+      }),
+    });
 
     const response = await rawResponse.json();
     const pollId = response.poll.id;
 
     if (config) {
-      await fetch(
-        `${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json;charset=utf-8",
-            Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-            accept: "application/json",
-          },
-          body: JSON.stringify({
-            pollConfiguration: config,
-          }),
+      await fetch(`${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8',
+          Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
+          accept: 'application/json',
         },
-      );
+        body: JSON.stringify({
+          pollConfiguration: config,
+        }),
+      });
     }
 
     for (const option of options) {
-      await fetch(
-        `${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${response.poll.id}/option`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json;charset=utf-8",
-            Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-            accept: "application/json",
-          },
-          body: JSON.stringify({
-            pollOptionText: option,
-          }),
+      await fetch(`${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${response.poll.id}/option`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8',
+          Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
+          accept: 'application/json',
         },
-      );
+        body: JSON.stringify({
+          pollOptionText: option,
+        }),
+      });
     }
     await fetch(
       `${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${response.poll.id}/share/public`,
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json;charset=utf-8",
+          'Content-Type': 'application/json;charset=utf-8',
           Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-          accept: "application/json",
+          accept: 'application/json',
         },
         body: JSON.stringify({
-          type: "public",
+          type: 'public',
         }),
       },
     );
     const rawShareResponse = await fetch(
       `${ncBasePath}/index.php/apps/polls/api/v1.0/poll/${response.poll.id}/shares`,
       {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json;charset=utf-8",
+          'Content-Type': 'application/json;charset=utf-8',
           Authorization: `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-          accept: "application/json",
+          accept: 'application/json',
         },
       },
     );

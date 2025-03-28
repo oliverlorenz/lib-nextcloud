@@ -1,23 +1,20 @@
 export class NextcloudHeaderService {
-  getHeaders(ncUsername: string, ncAppPassword: string) {
+  public getHeaders(ncUsername: string, ncAppPassword: string): Headers {
     const headers = new Headers();
-    headers.append(
-      "Authorization",
-      `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-    );
+    headers.append('Authorization', `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`);
     return headers;
   }
 
-  getJsonResponseHeaders(ncUsername: string, ncAppPassword: string) {
+  public getJsonResponseHeaders(ncUsername: string, ncAppPassword: string): Headers {
     const headers = this.getHeaders(ncUsername, ncAppPassword);
-    headers.append("Content-Type", "application/json");
-    headers.append("Accept", "application/json");
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
     return headers;
   }
 
-  getOCSHeaders(ncUsername: string, ncAppPassword: string) {
+  public getOCSHeaders(ncUsername: string, ncAppPassword: string): Headers {
     const headers = this.getJsonResponseHeaders(ncUsername, ncAppPassword);
-    headers.append("OCS-APIRequest", "true");
+    headers.append('OCS-APIRequest', 'true');
     return headers;
   }
 }

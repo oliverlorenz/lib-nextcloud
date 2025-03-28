@@ -3,17 +3,18 @@ import { NextcloudHeaderService } from "./NextcloudHeaderService";
 export class NextcloudTagService {
   constructor(private nextcloudCommonService: NextcloudHeaderService) {}
 
-  async getTags(ncBasePath: string, ncUsername: string, ncAppPassword: string) {
+  public async getTags(
+    ncBasePath: string,
+    ncUsername: string,
+    ncAppPassword: string,
+  ): Promise<boolean> {
     const headers = new Headers();
-    headers.append("Content-Type", "application/json");
-    headers.append("Accept", "application/json");
-    headers.append(
-      "Authorization",
-      `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-    );
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
+    headers.append('Authorization', `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`);
 
     const response = await fetch(`${ncBasePath}/remote.php/dav/systemtags`, {
-      method: "PROPFIND",
+      method: 'PROPFIND',
       headers,
     });
 
@@ -24,27 +25,24 @@ export class NextcloudTagService {
       if (response.status === 409) {
         return true;
       }
-      throw new Error("Failed to create tag");
+      throw new Error('Failed to create tag');
     }
     return true;
   }
 
-  async createTag(
+  public async createTag(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
     tagName: string,
-  ) {
+  ): Promise<boolean> {
     const headers = new Headers();
-    headers.append("Content-Type", "application/json");
-    headers.append("Accept", "application/json");
-    headers.append(
-      "Authorization",
-      `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-    );
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
+    headers.append('Authorization', `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`);
 
     const response = await fetch(`${ncBasePath}/remote.php/dav/systemtags`, {
-      method: "POST",
+      method: 'POST',
       headers,
       body: JSON.stringify({
         userVisible: true,
@@ -58,29 +56,26 @@ export class NextcloudTagService {
       if (response.status === 409) {
         return true;
       }
-      throw new Error("Failed to create tag");
+      throw new Error('Failed to create tag');
     }
     return true;
   }
 
-  async addTagByIdToFileById(
+  public async addTagByIdToFileById(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
     tagId: number,
     fileId: number,
-  ) {
+  ): Promise<boolean> {
     const headers = new Headers();
-    headers.append("Content-Type", "application/json");
-    headers.append("Accept", "*/*");
-    headers.append(
-      "Authorization",
-      `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`,
-    );
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', '*/*');
+    headers.append('Authorization', `Basic ${btoa(`${ncUsername}:${ncAppPassword}`)}`);
     const response = await fetch(
       `${ncBasePath}/remote.php/dav/systemtags-relations/files/${fileId}/${tagId}`,
       {
-        method: "PUT",
+        method: 'PUT',
         headers,
       },
     );
@@ -88,7 +83,7 @@ export class NextcloudTagService {
       if (response.status === 409) {
         return true;
       }
-      throw new Error("Failed to add tag to file");
+      throw new Error('Failed to add tag to file');
     }
     return true;
   }

@@ -16,26 +16,23 @@ export type Contact = {
 export class NextcloudContactService {
   constructor(private nextcloudCommonService: NextcloudHeaderService) {}
 
-  async getRawContacts(
+  private async getRawContacts(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
     ncCalenderName: string,
-  ) {
+  ): Promise<VCard4[]> {
     const response = await fetch(
       `${ncBasePath}/remote.php/dav/addressbooks/users/${ncUsername}/${ncCalenderName}/?export`,
       {
-        headers: this.nextcloudCommonService.getHeaders(
-          ncUsername,
-          ncAppPassword,
-        ),
+        headers: this.nextcloudCommonService.getHeaders(ncUsername, ncAppPassword),
       },
     );
 
     return parseVCards(await response.text()).vCards || [];
   }
 
-  async getContacts(
+  public async getContacts(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
@@ -50,26 +47,25 @@ export class NextcloudContactService {
     return contactList.map(this.mapContact);
   }
 
-  mapContact(card: VCard4): Contact {
+  protected mapContact(card: VCard4): Contact {
     const rawBirthday = card.BDAY?.value;
     const day = rawBirthday?.slice(-2);
     const month = rawBirthday?.slice(-4).slice(0, -2);
-    const year =
-      rawBirthday?.slice(0, -4) !== "--" ? rawBirthday?.slice(0, -4) : "0001";
+    const year = rawBirthday?.slice(0, -4) !== '--' ? rawBirthday?.slice(0, -4) : '0001';
 
     return {
-      lastName: card.N?.value.familyNames[0] || "",
-      firstName: card.N?.value.givenNames[0] || "",
+      lastName: card.N?.value.familyNames[0] || '',
+      firstName: card.N?.value.givenNames[0] || '',
       address: card.ADR
         ? // @ts-ignore
           card.ADR[0].value.streetAddress[0]
-        : "",
+        : '',
       // @ts-ignore
-      postalCode: card.ADR ? card.ADR[0].value.postalCode[0] : "",
+      postalCode: card.ADR ? card.ADR[0].value.postalCode[0] : '',
       // @ts-ignore
-      city: card.ADR ? card.ADR[0].value.locality[0] : "",
-      email: card.EMAIL ? card.EMAIL[0].value : "",
-      phoneNumber: card.TEL ? card.TEL[0].value : "",
+      city: card.ADR ? card.ADR[0].value.locality[0] : '',
+      email: card.EMAIL ? card.EMAIL[0].value : '',
+      phoneNumber: card.TEL ? card.TEL[0].value : '',
       birthday: moment(`${day}.${month}.${year}`).toDate(),
       username: card.x?.X_SOCIALPROFILE[0].value,
     };
