@@ -1,6 +1,6 @@
-import moment from "moment";
-import { parseVCards, VCard4 } from "vcard4-ts";
-import { NextcloudHeaderService } from "./NextcloudHeaderService";
+import moment from 'moment';
+import { parseVCards, VCard4 } from 'vcard4-ts';
+import { NextcloudHeaderService } from './NextcloudHeaderService';
 
 export type Contact = {
   lastName: string;

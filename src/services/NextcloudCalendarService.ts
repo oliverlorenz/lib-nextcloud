@@ -1,6 +1,6 @@
-import { NextcloudHeaderService } from "./NextcloudHeaderService";
+import { NextcloudHeaderService } from './NextcloudHeaderService';
 
-const IcalExpander = require("ical-expander");
+const IcalExpander = require('ical-expander');
 export class NextcloudCalendarService {
   constructor(private nextcloudCommonService: NextcloudHeaderService) {}
 

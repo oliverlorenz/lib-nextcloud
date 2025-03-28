@@ -1,4 +1,4 @@
-import { NextcloudHeaderService } from "./NextcloudHeaderService";
+import { NextcloudHeaderService } from './NextcloudHeaderService';
 
 export class NextcloudTagService {
   constructor(private nextcloudCommonService: NextcloudHeaderService) {}

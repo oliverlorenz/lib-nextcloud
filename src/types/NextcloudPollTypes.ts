@@ -1,17 +1,17 @@
 export enum NextcloudPollType {
-  TEXT = "textPoll",
-  DATE = "datePoll",
+  TEXT = 'textPoll',
+  DATE = 'datePoll',
 }
 
 export enum NextcloudPollAccess {
-  OPEN = "open",
-  PRIVATE = "private",
+  OPEN = 'open',
+  PRIVATE = 'private',
 }
 
 export enum NextcloudPollShowResults {
-  ALWAYS = "always",
-  CLOSED = "closed",
-  NEVER = "never",
+  ALWAYS = 'always',
+  CLOSED = 'closed',
+  NEVER = 'never',
 }
 
 export type NextcloudPollConfiguration = {

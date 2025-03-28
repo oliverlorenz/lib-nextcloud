@@ -1,1 +1,1 @@
-export * from "./NextcloudPollTypes";
+export * from './NextcloudPollTypes';

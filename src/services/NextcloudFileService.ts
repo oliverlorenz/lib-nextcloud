@@ -1,5 +1,5 @@
-import moment from "moment";
-import { NextcloudHeaderService } from "./NextcloudHeaderService";
+import moment from 'moment';
+import { NextcloudHeaderService } from './NextcloudHeaderService';
 import { AuthType, createClient, FileStat, WebDAVClient } from 'webdav';
 import { basename } from 'path';
 
