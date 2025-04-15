@@ -1,5 +1,6 @@
 export * from './NextcloudCalendarService';
-export * from './NextcloudContactService';
 export * from './NextcloudFileService';
+export * from './NextcloudHeaderService';
 export * from './NextcloudPollService';
+export * from './NextcloudTagService';
 export * from './NextcloudTalkService';
