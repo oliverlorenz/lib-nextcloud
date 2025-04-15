@@ -9,19 +9,30 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout the repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set NodeJS version
+        uses: actions/setup-node@v4.3.0
         with:
-          node-version: '22'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@oliverlorenz'
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+
       - run: npm install
+
+      - run: npm run build
+
       - name: Update package.json with release tag
         run: |
           TAG="${{ github.event.release.tag_name }}"
           echo "Updating package.json version to $TAG"
           npm version "$TAG" --no-git-tag-version
+
       - run: npm ci
+
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
