@@ -6,8 +6,8 @@ import type { NextcloudContactMapper } from './NextcloudContactMapper';
 
 export class NextcloudContactService {
   constructor(
-    private nextcloudContactMapper: NextcloudContactMapper, 
-    private nextcloudCommonService: NextcloudHeaderService = new NextcloudHeaderService()
+    private nextcloudContactMapper: NextcloudContactMapper,
+    private nextcloudCommonService: NextcloudHeaderService = new NextcloudHeaderService(),
   ) {}
 
   private async getRawContacts(
@@ -40,6 +40,4 @@ export class NextcloudContactService {
     );
     return contactList.map(this.nextcloudContactMapper.mapContact);
   }
-
-  
 }

@@ -1,6 +1,6 @@
-import type { VCard4 } from "vcard4-ts";
+import type { VCard4 } from 'vcard4-ts';
 import type { NextcloudContact } from './NextcloudContact';
-import moment from "moment";
+import moment from 'moment';
 
 export class NextcloudContactMapper {
   public mapContact(card: VCard4): NextcloudContact {
