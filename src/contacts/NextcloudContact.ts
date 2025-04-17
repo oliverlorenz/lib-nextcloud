@@ -4,8 +4,8 @@ export type NextcloudContact = {
   address: string;
   postalCode: string;
   city: string;
-  email: string;
-  phoneNumber: string;
+  email: string[];
+  phoneNumber: string[];
   birthday?: Date;
   username?: string;
 };
