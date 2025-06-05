@@ -26,4 +26,3 @@ describe('NextcloudFileService', () => {
     expect(count).toBe(2);
   });
 });
-
