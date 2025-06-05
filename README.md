@@ -1,6 +1,7 @@
 # lib-nextcloud
 
-a description
+A utility library for interacting with the Nextcloud API.
+It includes services for file management, calendars, contacts, tags, polls and Talk messages.
 
 ## Installation
 
