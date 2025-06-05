@@ -182,10 +182,10 @@ export class NextcloudFileService {
         ncUsername,
         ncAppPassword,
       ).getDirectoryContents(directoryPath)) as FileStat[];
-      results.filter((entry) => {
+      const files = results.filter((entry) => {
         return entry.type === 'file';
       });
-      return results.length;
+      return files.length;
     } catch (err) {
       if (createIfNotExisting) {
         await this.getWebDavClient(ncBasePath, ncUsername, ncAppPassword).createDirectory(
