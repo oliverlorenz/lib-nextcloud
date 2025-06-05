@@ -14,10 +14,10 @@ export class NextcloudContactService {
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
-    ncCalenderName: string,
+    ncCalendarName: string,
   ): Promise<VCard4[]> {
     const response = await fetch(
-      `${ncBasePath}/remote.php/dav/addressbooks/users/${ncUsername}/${ncCalenderName}/?export`,
+      `${ncBasePath}/remote.php/dav/addressbooks/users/${ncUsername}/${ncCalendarName}/?export`,
       {
         headers: this.nextcloudCommonService.getHeaders(ncUsername, ncAppPassword),
       },
@@ -30,13 +30,13 @@ export class NextcloudContactService {
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
-    ncCalenderName: string,
+    ncCalendarName: string,
   ): Promise<NextcloudContact[]> {
     const contactList = await this.getRawContacts(
       ncBasePath,
       ncUsername,
       ncAppPassword,
-      ncCalenderName,
+      ncCalendarName,
     );
     return contactList.map(this.nextcloudContactMapper.mapContact);
   }
