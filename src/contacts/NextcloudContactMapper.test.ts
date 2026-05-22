@@ -88,11 +88,7 @@ describe('NextcloudContactMapper', () => {
 
     it('maps multiple email addresses', () => {
       const card = {
-        EMAIL: [
-          { value: 'a@example.com' },
-          { value: 'b@example.com' },
-          { value: 'c@example.com' },
-        ],
+        EMAIL: [{ value: 'a@example.com' }, { value: 'b@example.com' }, { value: 'c@example.com' }],
       } as unknown as VCard4;
 
       const contact = mapper.mapContact(card);

@@ -20,7 +20,9 @@ describe('NextcloudTalkService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudTalkService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudTalkService);
+    expect(NextcloudTalkService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(
+      NextcloudTalkService,
+    );
   });
 
   describe('sendTextMessage', () => {
@@ -45,7 +47,9 @@ describe('NextcloudTalkService', () => {
     it('returns a UUID referenceId', async () => {
       const referenceId = await service.sendTextMessage('channel', 'Hi');
 
-      expect(referenceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(referenceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
     });
 
     it('throws when fetch fails', async () => {
@@ -82,7 +86,9 @@ describe('NextcloudTalkService', () => {
     it('returns a UUID referenceId', async () => {
       const referenceId = await service.sendFileMessage('channel', '/doc.pdf');
 
-      expect(referenceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(referenceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
     });
 
     it('throws when fetch fails', async () => {

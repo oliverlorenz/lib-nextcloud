@@ -6,7 +6,12 @@ describe('NextcloudTagService', () => {
   let fetchSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    service = new NextcloudTagService('https://nc.example.com', 'user', 'pass', new NextcloudHeaderService());
+    service = new NextcloudTagService(
+      'https://nc.example.com',
+      'user',
+      'pass',
+      new NextcloudHeaderService(),
+    );
     fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(''),
@@ -23,7 +28,9 @@ describe('NextcloudTagService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudTagService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudTagService);
+    expect(NextcloudTagService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(
+      NextcloudTagService,
+    );
   });
 
   describe('getTags', () => {
@@ -44,7 +51,9 @@ describe('NextcloudTagService', () => {
 
     it('returns true for 409 conflict', async () => {
       fetchSpy.mockResolvedValue({
-        ok: false, status: 409, text: () => Promise.resolve(''),
+        ok: false,
+        status: 409,
+        text: () => Promise.resolve(''),
       } as unknown as Response);
 
       const result = await service.getTags();
@@ -54,7 +63,9 @@ describe('NextcloudTagService', () => {
 
     it('throws for other error responses', async () => {
       fetchSpy.mockResolvedValue({
-        ok: false, status: 500, text: () => Promise.resolve(''),
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve(''),
       } as unknown as Response);
 
       await expect(service.getTags()).rejects.toThrow('Failed to get tags');
@@ -122,7 +133,9 @@ describe('NextcloudTagService', () => {
     it('throws for other errors', async () => {
       fetchSpy.mockResolvedValue({ ok: false, status: 403 } as unknown as Response);
 
-      await expect(service.addTagByIdToFileById(10, 20)).rejects.toThrow('Failed to add tag to file');
+      await expect(service.addTagByIdToFileById(10, 20)).rejects.toThrow(
+        'Failed to add tag to file',
+      );
     });
   });
 });

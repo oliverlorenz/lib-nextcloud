@@ -35,7 +35,9 @@ describe('NextcloudContactService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudContactService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudContactService);
+    expect(NextcloudContactService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(
+      NextcloudContactService,
+    );
   });
 
   describe('getContacts', () => {
@@ -84,7 +86,13 @@ describe('NextcloudContactService', () => {
       ];
       (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: mockCards });
       mockMapper.mapContact.mockReturnValue({
-        lastName: '', firstName: '', address: '', postalCode: '', city: '', email: [], phoneNumber: [],
+        lastName: '',
+        firstName: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        email: [],
+        phoneNumber: [],
       });
 
       const contacts = await service.getContacts('contacts');
@@ -105,7 +113,13 @@ describe('NextcloudContactService', () => {
 
   describe('getContactByPhoneNumber', () => {
     const makeContact = (phoneNumber: string[]): NextcloudContact => ({
-      lastName: '', firstName: '', address: '', postalCode: '', city: '', email: [], phoneNumber,
+      lastName: '',
+      firstName: '',
+      address: '',
+      postalCode: '',
+      city: '',
+      email: [],
+      phoneNumber,
     });
 
     beforeEach(() => {

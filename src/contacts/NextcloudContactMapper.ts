@@ -15,9 +15,7 @@ export class NextcloudContactMapper {
       city: card.ADR?.[0]?.value.locality?.[0] ?? '',
       email: card.EMAIL ? card.EMAIL.map((email) => email.value) : [],
       phoneNumber: card.TEL?.map((tel) => tel.value) || [],
-      birthday: rawBirthday
-        ? new Date(Number(year), Number(month) - 1, Number(day))
-        : undefined,
+      birthday: rawBirthday ? new Date(Number(year), Number(month) - 1, Number(day)) : undefined,
       username: card.x?.X_SOCIALPROFILE?.[0]?.value,
     };
   }

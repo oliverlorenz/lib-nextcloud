@@ -46,14 +46,15 @@ export class NextcloudTalkService {
 
   public async sendFileMessage(channelId: string, ncFilePath: string): Promise<string> {
     const referenceId = randomUUID().toString();
-    const response = await fetch(
-      `${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ shareType: TalkShareType.Room, path: ncFilePath, shareWith: channelId }),
-        headers: this.getHeaders(),
-      },
-    );
+    const response = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`, {
+      method: 'POST',
+      body: JSON.stringify({
+        shareType: TalkShareType.Room,
+        path: ncFilePath,
+        shareWith: channelId,
+      }),
+      headers: this.getHeaders(),
+    });
     if (!response.ok) {
       throw new Error(`Failed to send file: ${response.statusText}, ${await response.json()}`);
     }

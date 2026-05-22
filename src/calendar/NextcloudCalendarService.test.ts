@@ -4,7 +4,9 @@ import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 jest.mock('ical-expander', () => {
   return jest.fn().mockImplementation(() => ({
     all: jest.fn().mockReturnValue({
-      events: [{ startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, summary: 'Meeting' }],
+      events: [
+        { startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, summary: 'Meeting' },
+      ],
       occurrences: [
         {
           startDate: { toString: (): string => '2024-01-16T10:00:00.000Z' },
@@ -14,7 +16,10 @@ jest.mock('ical-expander', () => {
     }),
     between: jest.fn().mockReturnValue({
       events: [
-        { startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, summary: 'Event in range' },
+        {
+          startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
+          summary: 'Event in range',
+        },
       ],
       occurrences: [],
     }),
@@ -26,7 +31,12 @@ describe('NextcloudCalendarService', () => {
   let fetchSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    service = new NextcloudCalendarService('https://nc.example.com', 'user', 'pass', new NextcloudHeaderService());
+    service = new NextcloudCalendarService(
+      'https://nc.example.com',
+      'user',
+      'pass',
+      new NextcloudHeaderService(),
+    );
     fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       text: () => Promise.resolve('BEGIN:VCALENDAR\nEND:VCALENDAR'),
     } as unknown as Response);
@@ -41,7 +51,9 @@ describe('NextcloudCalendarService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudCalendarService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudCalendarService);
+    expect(
+      NextcloudCalendarService.create('https://nc.example.com', 'user', 'pass'),
+    ).toBeInstanceOf(NextcloudCalendarService);
   });
 
   describe('getEvents', () => {
@@ -63,7 +75,11 @@ describe('NextcloudCalendarService', () => {
     });
 
     it('returns only range events when date range given', async () => {
-      const events = await service.getEvents('personal', new Date('2024-01-01'), new Date('2024-01-31'));
+      const events = await service.getEvents(
+        'personal',
+        new Date('2024-01-01'),
+        new Date('2024-01-31'),
+      );
 
       expect(events).toHaveLength(1);
       expect(events[0].title).toBe('Event in range');

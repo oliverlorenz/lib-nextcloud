@@ -29,7 +29,12 @@ describe('NextcloudFileService', () => {
       moveFile: jest.fn().mockResolvedValue(undefined),
     };
     (createClient as jest.Mock).mockReturnValue(mockWebdavClient);
-    service = new NextcloudFileService('https://nc.example.com', 'user', 'pass', new NextcloudHeaderService());
+    service = new NextcloudFileService(
+      'https://nc.example.com',
+      'user',
+      'pass',
+      new NextcloudHeaderService(),
+    );
     fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
@@ -45,14 +50,17 @@ describe('NextcloudFileService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudFileService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudFileService);
+    expect(NextcloudFileService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(
+      NextcloudFileService,
+    );
   });
 
   describe('sharePublicly', () => {
     it('returns share URL from response', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ ocs: { data: { url: 'https://nc.example.com/s/share123' } } }),
+        json: () =>
+          Promise.resolve({ ocs: { data: { url: 'https://nc.example.com/s/share123' } } }),
       } as unknown as Response);
 
       const url = await service.sharePublicly('/photos/image.jpg');
@@ -90,7 +98,9 @@ describe('NextcloudFileService', () => {
 
     it('throws when response is not ok', async () => {
       fetchSpy.mockResolvedValue({
-        ok: false, status: 403, statusText: 'Forbidden',
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
       } as unknown as Response);
 
       await expect(service.sharePublicly('/file.txt')).rejects.toThrow('Failed to share publicly');
@@ -101,7 +111,8 @@ describe('NextcloudFileService', () => {
     it('returns share URL', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ ocs: { data: { url: 'https://nc.example.com/s/user-share' } } }),
+        json: () =>
+          Promise.resolve({ ocs: { data: { url: 'https://nc.example.com/s/user-share' } } }),
       } as unknown as Response);
 
       const url = await service.shareWithUser('/file.txt', 'otheruser');
@@ -125,10 +136,14 @@ describe('NextcloudFileService', () => {
 
     it('throws when response is not ok', async () => {
       fetchSpy.mockResolvedValue({
-        ok: false, status: 404, statusText: 'Not Found',
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
       } as unknown as Response);
 
-      await expect(service.shareWithUser('/file.txt', 'alice')).rejects.toThrow('Failed to share with user');
+      await expect(service.shareWithUser('/file.txt', 'alice')).rejects.toThrow(
+        'Failed to share with user',
+      );
     });
   });
 
@@ -202,8 +217,16 @@ describe('NextcloudFileService', () => {
       const results = await service.bulkUpload('/uploads', list);
 
       expect(results).toHaveLength(2);
-      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith('/uploads/a.txt', list[0].buffer, {});
-      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith('/uploads/b.txt', list[1].buffer, {});
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/uploads/a.txt',
+        list[0].buffer,
+        {},
+      );
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/uploads/b.txt',
+        list[1].buffer,
+        {},
+      );
     });
 
     it('returns empty array for empty list', async () => {
@@ -312,7 +335,11 @@ describe('NextcloudFileService', () => {
 
       expect(result).toBe('/target.txt');
       expect(mockWebdavClient.getFileContents).toHaveBeenCalledWith('/template.txt');
-      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith('/target.txt', templateBuffer, {});
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/target.txt',
+        templateBuffer,
+        {},
+      );
     });
   });
 
@@ -325,7 +352,10 @@ describe('NextcloudFileService', () => {
       const result = await service.createFileFromTemplateAndReplace(
         '/target.txt',
         '/template.txt',
-        [[/\{\{NAME\}\}/, 'World'], [/\{\{PLACE\}\}/, 'Berlin']],
+        [
+          [/\{\{NAME\}\}/, 'World'],
+          [/\{\{PLACE\}\}/, 'Berlin'],
+        ],
       );
 
       expect(result).toBe('/target.txt');

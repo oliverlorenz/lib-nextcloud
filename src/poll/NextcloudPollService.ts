@@ -50,31 +50,42 @@ export class NextcloudPollService {
     const createResponse = await createRaw.json();
     const pollId = createResponse.poll.id;
 
-    const updateRaw = await fetch(`${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ pollConfiguration: config }),
-    });
+    const updateRaw = await fetch(
+      `${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ pollConfiguration: config }),
+      },
+    );
     if (!updateRaw.ok) {
       throw new Error(`Failed to update poll: ${updateRaw.status} ${updateRaw.statusText}`);
     }
 
     for (const option of options) {
-      const optionRaw = await fetch(`${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}/option`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ pollOptionText: option }),
-      });
+      const optionRaw = await fetch(
+        `${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}/option`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ pollOptionText: option }),
+        },
+      );
       if (!optionRaw.ok) {
-        throw new Error(`Failed to add poll option "${option}": ${optionRaw.status} ${optionRaw.statusText}`);
+        throw new Error(
+          `Failed to add poll option "${option}": ${optionRaw.status} ${optionRaw.statusText}`,
+        );
       }
     }
 
-    const shareRaw = await fetch(`${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}/share/public`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ type: 'public' }),
-    });
+    const shareRaw = await fetch(
+      `${this.ncBasePath}/index.php/apps/polls/api/v1.0/poll/${pollId}/share/public`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ type: 'public' }),
+      },
+    );
     if (!shareRaw.ok) {
       throw new Error(`Failed to create poll share: ${shareRaw.status} ${shareRaw.statusText}`);
     }

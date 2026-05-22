@@ -24,7 +24,10 @@ export class NextcloudTagService {
   public async getTags(): Promise<boolean> {
     const response = await fetch(`${this.ncBasePath}/remote.php/dav/systemtags`, {
       method: 'PROPFIND',
-      headers: this.nextcloudCommonService.getJsonResponseHeaders(this.ncUsername, this.ncAppPassword),
+      headers: this.nextcloudCommonService.getJsonResponseHeaders(
+        this.ncUsername,
+        this.ncAppPassword,
+      ),
     });
 
     if (!response.ok) {
@@ -39,7 +42,10 @@ export class NextcloudTagService {
   public async createTag(tagName: string): Promise<boolean> {
     const response = await fetch(`${this.ncBasePath}/remote.php/dav/systemtags`, {
       method: 'POST',
-      headers: this.nextcloudCommonService.getJsonResponseHeaders(this.ncUsername, this.ncAppPassword),
+      headers: this.nextcloudCommonService.getJsonResponseHeaders(
+        this.ncUsername,
+        this.ncAppPassword,
+      ),
       body: JSON.stringify({
         userVisible: true,
         userAssignable: true,
@@ -60,7 +66,13 @@ export class NextcloudTagService {
   public async addTagByIdToFileById(tagId: number, fileId: number): Promise<boolean> {
     const response = await fetch(
       `${this.ncBasePath}/remote.php/dav/systemtags-relations/files/${fileId}/${tagId}`,
-      { method: 'PUT', headers: this.nextcloudCommonService.getJsonResponseHeaders(this.ncUsername, this.ncAppPassword) },
+      {
+        method: 'PUT',
+        headers: this.nextcloudCommonService.getJsonResponseHeaders(
+          this.ncUsername,
+          this.ncAppPassword,
+        ),
+      },
     );
     if (!response.ok) {
       if (response.status === 409) {

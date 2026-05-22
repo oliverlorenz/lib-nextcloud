@@ -18,12 +18,14 @@ describe('NextcloudPollService', () => {
   });
 
   it('create() returns an instance without manual dependency injection', () => {
-    expect(NextcloudPollService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(NextcloudPollService);
+    expect(NextcloudPollService.create('https://nc.example.com', 'user', 'pass')).toBeInstanceOf(
+      NextcloudPollService,
+    );
   });
 
   describe('createTextPoll', () => {
     const okJson = (data: unknown): Response =>
-      ({ ok: true, json: (): Promise<unknown> => Promise.resolve(data) } as unknown as Response);
+      ({ ok: true, json: (): Promise<unknown> => Promise.resolve(data) }) as unknown as Response;
 
     it('creates poll with options and returns share URL', async () => {
       fetchSpy = jest
@@ -35,11 +37,10 @@ describe('NextcloudPollService', () => {
         .mockResolvedValueOnce(okJson({}))
         .mockResolvedValueOnce(okJson({ shares: [{ URL: 'https://nc.example.com/s/abc123' }] }));
 
-      const url = await service.createTextPoll(
-        'Best option?',
-        ['Option A', 'Option B'],
-        { access: NextcloudPollAccess.OPEN, showResults: NextcloudPollShowResults.ALWAYS },
-      );
+      const url = await service.createTextPoll('Best option?', ['Option A', 'Option B'], {
+        access: NextcloudPollAccess.OPEN,
+        showResults: NextcloudPollShowResults.ALWAYS,
+      });
 
       expect(url).toBe('https://nc.example.com/s/abc123');
     });
@@ -50,11 +51,10 @@ describe('NextcloudPollService', () => {
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValue(okJson({ shares: [{ URL: 'https://url' }] }));
 
-      await service.createTextPoll(
-        'Title',
-        ['A'],
-        { access: NextcloudPollAccess.OPEN, showResults: NextcloudPollShowResults.ALWAYS },
-      );
+      await service.createTextPoll('Title', ['A'], {
+        access: NextcloudPollAccess.OPEN,
+        showResults: NextcloudPollShowResults.ALWAYS,
+      });
 
       expect(fetchSpy).toHaveBeenCalledWith(
         'https://nc.example.com/index.php/apps/polls/api/v1.0/poll',
@@ -68,11 +68,10 @@ describe('NextcloudPollService', () => {
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValue(okJson({ shares: [{ URL: 'https://url' }] }));
 
-      await service.createTextPoll(
-        'Title',
-        ['A', 'B', 'C'],
-        { access: NextcloudPollAccess.OPEN, showResults: NextcloudPollShowResults.ALWAYS },
-      );
+      await service.createTextPoll('Title', ['A', 'B', 'C'], {
+        access: NextcloudPollAccess.OPEN,
+        showResults: NextcloudPollShowResults.ALWAYS,
+      });
 
       const optionCalls = fetchSpy.mock.calls.filter(([url]) =>
         (url as string).includes('/option'),
@@ -83,10 +82,17 @@ describe('NextcloudPollService', () => {
     it('throws when poll creation fails', async () => {
       fetchSpy = jest
         .spyOn(global, 'fetch')
-        .mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' } as unknown as Response);
+        .mockResolvedValue({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+        } as unknown as Response);
 
       await expect(
-        service.createTextPoll('Title', ['A'], { access: NextcloudPollAccess.OPEN, showResults: NextcloudPollShowResults.ALWAYS }),
+        service.createTextPoll('Title', ['A'], {
+          access: NextcloudPollAccess.OPEN,
+          showResults: NextcloudPollShowResults.ALWAYS,
+        }),
       ).rejects.toThrow('Failed to create poll');
     });
 
@@ -95,10 +101,17 @@ describe('NextcloudPollService', () => {
         .spyOn(global, 'fetch')
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValueOnce(okJson({}))
-        .mockResolvedValueOnce({ ok: false, status: 422, statusText: 'Unprocessable Entity' } as unknown as Response);
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 422,
+          statusText: 'Unprocessable Entity',
+        } as unknown as Response);
 
       await expect(
-        service.createTextPoll('Title', ['A', 'B'], { access: NextcloudPollAccess.OPEN, showResults: NextcloudPollShowResults.ALWAYS }),
+        service.createTextPoll('Title', ['A', 'B'], {
+          access: NextcloudPollAccess.OPEN,
+          showResults: NextcloudPollShowResults.ALWAYS,
+        }),
       ).rejects.toThrow('Failed to add poll option');
     });
   });

@@ -18,7 +18,12 @@ export class NextcloudFileService {
     ncUsername: string,
     ncAppPassword: string,
   ): NextcloudFileService {
-    return new NextcloudFileService(ncBasePath, ncUsername, ncAppPassword, new NextcloudHeaderService());
+    return new NextcloudFileService(
+      ncBasePath,
+      ncUsername,
+      ncAppPassword,
+      new NextcloudHeaderService(),
+    );
   }
 
   constructor(
@@ -43,19 +48,16 @@ export class NextcloudFileService {
   }
 
   public async sharePublicly(ncFilePath: string, expireDate?: Date): Promise<string> {
-    const raw = await fetch(
-      `${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`,
-      {
-        method: 'POST',
-        headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
-        body: JSON.stringify({
-          path: ncFilePath,
-          permissions: SharePermissions.ReadWrite,
-          expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
-          shareType: ShareType.PublicLink,
-        }),
-      },
-    );
+    const raw = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`, {
+      method: 'POST',
+      headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
+      body: JSON.stringify({
+        path: ncFilePath,
+        permissions: SharePermissions.ReadWrite,
+        expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
+        shareType: ShareType.PublicLink,
+      }),
+    });
     if (!raw.ok) {
       throw new Error(`Failed to share publicly: ${raw.status} ${raw.statusText}`);
     }
@@ -68,20 +70,17 @@ export class NextcloudFileService {
     shareWithUsername: string,
     expireDate?: Date,
   ): Promise<string> {
-    const raw = await fetch(
-      `${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`,
-      {
-        method: 'POST',
-        headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
-        body: JSON.stringify({
-          path: ncFilePath,
-          permissions: SharePermissions.ReadOnly,
-          expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
-          shareType: ShareType.User,
-          shareWith: shareWithUsername,
-        }),
-      },
-    );
+    const raw = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`, {
+      method: 'POST',
+      headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
+      body: JSON.stringify({
+        path: ncFilePath,
+        permissions: SharePermissions.ReadOnly,
+        expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
+        shareType: ShareType.User,
+        shareWith: shareWithUsername,
+      }),
+    });
     if (!raw.ok) {
       throw new Error(`Failed to share with user: ${raw.status} ${raw.statusText}`);
     }
@@ -100,7 +99,13 @@ export class NextcloudFileService {
   public async addTagByFileId(fileId: number, tagId: number): Promise<boolean> {
     const response = await fetch(
       `${this.ncBasePath}/remote.php/dav/systemtags-relations/files/${fileId}/${tagId}`,
-      { method: 'PUT', headers: this.nextcloudCommonService.getJsonResponseHeaders(this.ncUsername, this.ncAppPassword) },
+      {
+        method: 'PUT',
+        headers: this.nextcloudCommonService.getJsonResponseHeaders(
+          this.ncUsername,
+          this.ncAppPassword,
+        ),
+      },
     );
     if (!response.ok) {
       if (response.status === 409) {
