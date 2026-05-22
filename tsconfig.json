@@ -17,6 +17,7 @@
     "pretty": true,
     "declaration": true,
     "declarationMap": true,
+    "types": ["node", "jest"],
     "plugins": [
       {
         "name": "typescript-strict-plugin",
