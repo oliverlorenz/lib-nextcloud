@@ -5,7 +5,7 @@ const TalkShareType = {
 } as const;
 
 export class NextcloudTalkService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,

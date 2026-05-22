@@ -1,7 +1,7 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 
 export class NextcloudTagService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,

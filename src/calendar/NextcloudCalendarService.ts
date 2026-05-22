@@ -3,7 +3,7 @@ import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 const IcalExpander = require('ical-expander');
 
 export class NextcloudCalendarService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,

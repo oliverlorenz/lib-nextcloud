@@ -6,7 +6,7 @@ import {
 } from './NextcloudPollTypes';
 
 export class NextcloudPollService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,

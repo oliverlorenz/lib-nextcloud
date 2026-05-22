@@ -22,8 +22,8 @@ describe('NextcloudPollService', () => {
   });
 
   describe('createTextPoll', () => {
-    const okJson = (data: unknown) =>
-      ({ ok: true, json: () => Promise.resolve(data) } as unknown as Response);
+    const okJson = (data: unknown): Response =>
+      ({ ok: true, json: (): Promise<unknown> => Promise.resolve(data) } as unknown as Response);
 
     it('creates poll with options and returns share URL', async () => {
       fetchSpy = jest

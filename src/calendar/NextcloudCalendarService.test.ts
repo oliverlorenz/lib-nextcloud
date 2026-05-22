@@ -4,17 +4,17 @@ import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 jest.mock('ical-expander', () => {
   return jest.fn().mockImplementation(() => ({
     all: jest.fn().mockReturnValue({
-      events: [{ startDate: { toString: () => '2024-01-15T10:00:00.000Z' }, summary: 'Meeting' }],
+      events: [{ startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, summary: 'Meeting' }],
       occurrences: [
         {
-          startDate: { toString: () => '2024-01-16T10:00:00.000Z' },
+          startDate: { toString: (): string => '2024-01-16T10:00:00.000Z' },
           item: { summary: 'Recurring' },
         },
       ],
     }),
     between: jest.fn().mockReturnValue({
       events: [
-        { startDate: { toString: () => '2024-01-15T10:00:00.000Z' }, summary: 'Event in range' },
+        { startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, summary: 'Event in range' },
       ],
       occurrences: [],
     }),

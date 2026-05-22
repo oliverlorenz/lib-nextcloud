@@ -13,7 +13,7 @@ const SharePermissions = {
 } as const;
 
 export class NextcloudFileService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,

@@ -5,7 +5,7 @@ import type { NextcloudContact } from './NextcloudContact';
 import { NextcloudContactMapper } from './NextcloudContactMapper';
 
 export class NextcloudContactService {
-  static create(
+  public static create(
     ncBasePath: string,
     ncUsername: string,
     ncAppPassword: string,
