@@ -80,13 +80,11 @@ describe('NextcloudPollService', () => {
     });
 
     it('throws when poll creation fails', async () => {
-      fetchSpy = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue({
-          ok: false,
-          status: 500,
-          statusText: 'Internal Server Error',
-        } as unknown as Response);
+      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      } as unknown as Response);
 
       await expect(
         service.createTextPoll('Title', ['A'], {
