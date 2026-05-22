@@ -52,7 +52,6 @@
   },
   "dependencies": {
     "ical-expander": "^3.1.0",
-    "moment": "^2.30.1",
     "vcard4-ts": "^0.4.1",
     "webdav": "^5.8.0"
   }
