@@ -9,4 +9,5 @@ export type NextcloudContact = {
   phoneNumber: string[];
   birthday?: Date;
   username?: string;
+  photo?: string;
 };

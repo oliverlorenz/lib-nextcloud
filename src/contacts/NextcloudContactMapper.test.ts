@@ -124,5 +124,23 @@ describe('NextcloudContactMapper', () => {
 
       expect(contact.username).toBeUndefined();
     });
+
+    it('maps photo when PHOTO is present', () => {
+      const card = {
+        PHOTO: [{ value: 'data:image/jpeg;base64,/9j/abc123' }],
+      } as unknown as VCard4;
+
+      const contact = mapper.mapContact(card);
+
+      expect(contact.photo).toBe('data:image/jpeg;base64,/9j/abc123');
+    });
+
+    it('returns undefined photo when PHOTO is absent', () => {
+      const card = {} as unknown as VCard4;
+
+      const contact = mapper.mapContact(card);
+
+      expect(contact.photo).toBeUndefined();
+    });
   });
 });

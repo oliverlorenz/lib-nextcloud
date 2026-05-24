@@ -142,16 +142,42 @@ const contacts = NextcloudContactService.create('https://nc.example.com', 'user'
 
 | Method | Description |
 |---|---|
-| `getContacts(addressBook)` | Fetch all contacts from an address book |
+| `getContacts(addressBook, options?)` | Fetch all contacts from an address book |
+| `getContactUids(addressBook)` | List all contact UIDs in an address book |
+| `getContactByUid(addressBook, uid, options?)` | Fetch a single contact by UID |
 | `getContactByPhoneNumber(addressBook, phoneNumber)` | Find a contact by phone number |
 | `updateContact(addressBook, uid, updates)` | Update individual fields of an existing contact |
+
+`getContacts` uses a two-phase CardDAV fetch: a lightweight PROPFIND to discover contact URLs, followed by batched `addressbook-multiget` REPORT requests. By default only `NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES` are requested (excludes `PHOTO` to reduce payload). Pass a custom `properties` array to override which vCard properties are fetched. The optional `batchSize` (default: `100`) controls how many contacts are fetched per REPORT request.
 
 **Examples**
 
 ```ts
-// All contacts
+// All contacts (batches of 100 by default, no profile photos)
 const all = await contacts.getContacts('contacts');
 // [{ uid, firstName, lastName, address, postalCode, city, email[], phoneNumber[], birthday?, username? }]
+
+// Custom batch size for large address books
+const all = await contacts.getContacts('contacts', { batchSize: 50 });
+
+// Include profile photos by extending the default property set
+import { NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES } from '@oliverlorenz/lib-nextcloud';
+const withPhotos = await contacts.getContacts('contacts', {
+  properties: [...NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES, 'PHOTO'],
+});
+// contact.photo contains e.g. "data:image/jpeg;base64,..."
+
+// List all UIDs (lightweight, no vCard data fetched)
+const uids = await contacts.getContactUids('contacts');
+// ['abc-123', 'def-456', ...]
+
+// Fetch a single contact by UID
+const contact = await contacts.getContactByUid('contacts', 'abc-123');
+
+// With custom properties (e.g. including photo)
+const contact = await contacts.getContactByUid('contacts', 'abc-123', {
+  properties: [...NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES, 'PHOTO'],
+});
 
 // Lookup by phone number (E.164 format recommended)
 const contact = await contacts.getContactByPhoneNumber('contacts', '+491511234567');
