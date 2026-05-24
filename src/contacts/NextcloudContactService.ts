@@ -40,8 +40,44 @@ export class NextcloudContactService {
     ncAddressBookName: string,
     phoneNumber: string,
   ): Promise<NextcloudContact | undefined> {
-    const contacts = await this.getContacts(ncAddressBookName);
-    return contacts.find((contact) => contact.phoneNumber.includes(phoneNumber));
+    const escapedPhoneNumber = phoneNumber
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const body = `<?xml version="1.0" encoding="UTF-8"?>
+<card:addressbook-query xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+  <d:prop>
+    <d:getetag/>
+    <card:address-data/>
+  </d:prop>
+  <card:filter test="anyof">
+    <card:prop-filter name="TEL">
+      <card:text-match collation="i;unicode-casemap" match-type="contains">${escapedPhoneNumber}</card:text-match>
+    </card:prop-filter>
+  </card:filter>
+</card:addressbook-query>`;
+
+    const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
+    headers.append('Content-Type', 'application/xml');
+    headers.append('Depth', '1');
+
+    const response = await fetch(
+      `${this.ncBasePath}/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/`,
+      { method: 'REPORT', headers, body },
+    );
+
+    const xmlText = await response.text();
+    const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
+
+    for (const match of xmlText.matchAll(addressDataRegex)) {
+      const vCardText = match[1].trim();
+      const parsed = parseVCards(vCardText).vCards;
+      if (parsed && parsed.length > 0) {
+        return this.nextcloudContactMapper.mapContact(parsed[0]);
+      }
+    }
+    return undefined;
   }
 
   public async getContacts(ncAddressBookName: string): Promise<NextcloudContact[]> {
