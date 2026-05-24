@@ -155,7 +155,7 @@ const contacts = NextcloudContactService.create('https://nc.example.com', 'user'
 ```ts
 // All contacts (batches of 100 by default, no profile photos)
 const all = await contacts.getContacts('contacts');
-// [{ uid, firstName, lastName, address, postalCode, city, email[], phoneNumber[], birthday?, username? }]
+// [{ uid, firstName, lastName, address, postalCode, city, email[], phoneNumber[], birthday?, username?, organization? }]
 
 // Custom batch size for large address books
 const all = await contacts.getContacts('contacts', { batchSize: 50 });
@@ -198,7 +198,7 @@ await contacts.updateContact('contacts', contact.uid, {
 });
 ```
 
-`updateContact` accepts any subset of the `NextcloudContact` fields (except `uid`). Multi-value fields (`phoneNumber`, `email`) replace the full list. Compound fields (`address`, `postalCode`, `city` share the same vCard ADR property; `firstName` and `lastName` share N/FN) are merged with the existing values — unspecified components are preserved.
+`updateContact` accepts any subset of the `NextcloudContact` fields (except `uid`). Multi-value fields (`phoneNumber`, `email`) replace the full list. Compound fields (`address`, `postalCode`, `city` share the same vCard ADR property; `firstName` and `lastName` share N/FN) are merged with the existing values — unspecified components are preserved. `organization` maps to the vCard `ORG` property.
 
 ---
 
