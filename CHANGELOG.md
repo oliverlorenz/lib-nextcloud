@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.0...v1.1.1) (2026-05-24)
+
+### Bug Fixes
+
+* **contacts:** use filename as canonical UID in getContacts ([#118](https://github.com/oliverlorenz/lib-nextcloud/issues/118)) ([9991172](https://github.com/oliverlorenz/lib-nextcloud/commit/99911727cc875e9369349115556499c9e7af3d57)), closes [#117](https://github.com/oliverlorenz/lib-nextcloud/issues/117)
+
 ## [1.1.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.9...v1.1.0) (2026-05-24)
 
 ### Features
