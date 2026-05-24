@@ -1,3 +1,9 @@
+## [1.1.2](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.1...v1.1.2) (2026-05-24)
+
+### Bug Fixes
+
+* **contacts:** decode XML entities before trim to preserve CRLF line endings ([#120](https://github.com/oliverlorenz/lib-nextcloud/issues/120)) ([c5af983](https://github.com/oliverlorenz/lib-nextcloud/commit/c5af983f3853e3e2dd5b93b38cb0856541708b62)), closes [#13](https://github.com/oliverlorenz/lib-nextcloud/issues/13) [#13](https://github.com/oliverlorenz/lib-nextcloud/issues/13) [#119](https://github.com/oliverlorenz/lib-nextcloud/issues/119) [#13](https://github.com/oliverlorenz/lib-nextcloud/issues/13)
+
 ## [1.1.1](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.0...v1.1.1) (2026-05-24)
 
 ### Bug Fixes
