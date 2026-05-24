@@ -158,6 +158,17 @@ npm install   # no flags needed
 
 Every code change that adds, removes, or alters public API behaviour must also update `README.md`. This includes new methods, changed signatures, new types, and changed constructor parameters. The README is the primary documentation for library consumers.
 
+## Workflow
+
+**Every change starts with a GitHub Issue.**
+Before any implementation begins, the requirements must be defined and captured in a GitHub Issue. Do not write any code, create branches, or open PRs until an Issue exists and the requirements are clear. Refuse to proceed without one.
+
+**All changes land via Pull Request.**
+No direct commits to `main`. Every change goes through a feature branch and a PR.
+
+**At the start of every session:**
+Run `git branch` and `git status` to confirm you are on `main` and the working tree is clean before starting new work.
+
 ## Requirements
 
 - Node >= 22.0.0
