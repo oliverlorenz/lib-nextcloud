@@ -27,9 +27,9 @@ Releases are fully automated via `semantic-release`. No manual steps required af
 |---|---|---|
 | `feat: …` | minor (1.**x**.0) | ✅ Features |
 | `fix: …` | patch (1.x.**x**) | ✅ Bug Fixes |
-| `perf: …` / `refactor: …` / `docs: …` | patch | ✅ |
+| `perf: …` / `revert: …` | patch (1.x.**x**) | ✅ |
 | `feat!: …` or `BREAKING CHANGE:` in body | major (**x**.0.0) | ✅ Breaking |
-| `chore: …` / `ci: …` / `test: …` / `build: …` | no release | — |
+| `refactor: …` / `docs: …` / `chore: …` / `ci: …` / `test: …` / `build: …` | no release | — |
 
 **When writing PR titles:**
 - Use imperative, lowercase: `feat: add contact search` not `feat: Added contact search`
