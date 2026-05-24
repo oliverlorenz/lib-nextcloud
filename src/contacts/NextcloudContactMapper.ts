@@ -18,6 +18,7 @@ export class NextcloudContactMapper {
       phoneNumber: card.TEL?.map((tel) => tel.value) || [],
       birthday: rawBirthday ? new Date(Number(year), Number(month) - 1, Number(day)) : undefined,
       username: card.x?.X_SOCIALPROFILE?.[0]?.value,
+      photo: card.PHOTO?.[0]?.value ?? undefined,
     };
   }
 }

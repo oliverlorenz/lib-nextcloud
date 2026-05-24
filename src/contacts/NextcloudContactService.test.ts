@@ -1,4 +1,7 @@
-import { NextcloudContactService } from './NextcloudContactService';
+import {
+  NextcloudContactService,
+  NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES,
+} from './NextcloudContactService';
 import { NextcloudContactMapper } from './NextcloudContactMapper';
 import type { NextcloudContact } from './NextcloudContact';
 
@@ -41,25 +44,110 @@ describe('NextcloudContactService', () => {
   });
 
   describe('getContacts', () => {
-    it('fetches from correct address book URL', async () => {
+    const makePropfindXml = (hrefs: string[]): string => {
+      const responses = hrefs
+        .map(
+          (href) =>
+            `<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:getetag>"x"</d:getetag></d:prop></d:propstat></d:response>`,
+        )
+        .join('');
+      return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">${responses}</d:multistatus>`;
+    };
+
+    const makeMultigetXml = (addressDataItems: string[]): string => {
+      const responses = addressDataItems
+        .map(
+          (data) =>
+            `<d:response><d:propstat><d:prop><card:address-data>${data}</card:address-data></d:prop></d:propstat></d:response>`,
+        )
+        .join('');
+      return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">${responses}</d:multistatus>`;
+    };
+
+    const mockFetchSequence = (...xmlStrings: string[]): void => {
+      for (const xml of xmlStrings) {
+        fetchSpy.mockResolvedValueOnce({
+          text: () => Promise.resolve(xml),
+        } as unknown as Response);
+      }
+    };
+
+    it('sends PROPFIND to the correct address book URL', async () => {
+      mockFetchSequence(makePropfindXml([]));
+
       await service.getContacts('contacts');
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        'https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/?export',
-        expect.any(Object),
+        'https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/',
+        expect.objectContaining({ method: 'PROPFIND' }),
       );
     });
 
-    it('returns empty array when address book has no contacts', async () => {
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+    it('sends Depth: 1 in PROPFIND request', async () => {
+      mockFetchSequence(makePropfindXml([]));
 
-      const contacts = await service.getContacts('contacts');
+      await service.getContacts('contacts');
 
-      expect(contacts).toEqual([]);
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect((options.headers as Headers).get('Depth')).toBe('1');
     });
 
-    it('maps each vCard to a contact via mapper', async () => {
-      const mockCard = { N: { value: { familyNames: ['Doe'], givenNames: ['John'] } } };
+    it('returns empty array when no contacts found', async () => {
+      mockFetchSequence(makePropfindXml([]));
+
+      const result = await service.getContacts('contacts');
+
+      expect(result).toEqual([]);
+    });
+
+    it('skips multiget when PROPFIND returns no hrefs', async () => {
+      mockFetchSequence(makePropfindXml([]));
+
+      await service.getContacts('contacts');
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends addressbook-multiget REPORT with hrefs from PROPFIND', async () => {
+      const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([]));
+
+      await service.getContacts('contacts');
+
+      const [, multigetOptions] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      expect(multigetOptions.method).toBe('REPORT');
+      expect(multigetOptions.body).toContain(href);
+    });
+
+    it('requests default properties in multiget by default', async () => {
+      const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([]));
+
+      await service.getContacts('contacts');
+
+      const [, multigetOptions] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      for (const prop of NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES) {
+        expect(multigetOptions.body).toContain(prop);
+      }
+      expect(multigetOptions.body).not.toContain('PHOTO');
+    });
+
+    it('requests only the specified properties when properties option is set', async () => {
+      const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([]));
+
+      await service.getContacts('contacts', {
+        properties: [...NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES, 'PHOTO'],
+      });
+
+      const [, multigetOptions] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      expect(multigetOptions.body).toContain('PHOTO');
+    });
+
+    it('maps each contact via mapper', async () => {
+      const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
+      const vCardText = 'BEGIN:VCARD\nVERSION:4.0\nEND:VCARD';
+      const mockCard = { UID: { value: 'abc-123' } };
       const mockContact: NextcloudContact = {
         uid: 'abc-123',
         lastName: 'Doe',
@@ -70,40 +158,185 @@ describe('NextcloudContactService', () => {
         email: [],
         phoneNumber: [],
       };
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([vCardText]));
       (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
       mockMapper.mapContact.mockReturnValue(mockContact);
 
-      const contacts = await service.getContacts('contacts');
+      const result = await service.getContacts('contacts');
 
       expect(mockMapper.mapContact).toHaveBeenCalledWith(mockCard);
-      expect(contacts).toHaveLength(1);
-      expect(contacts[0]).toEqual(mockContact);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(mockContact);
     });
 
-    it('maps multiple vCards', async () => {
-      const mockCards = [
-        { N: { value: { familyNames: ['A'] } } },
-        { N: { value: { familyNames: ['B'] } } },
-      ];
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: mockCards });
-      mockMapper.mapContact.mockReturnValue({
-        lastName: '',
-        firstName: '',
+    it('batches hrefs according to batchSize option', async () => {
+      const hrefs = [0, 1, 2].map(
+        (i) => `/remote.php/dav/addressbooks/users/user/contacts/contact-${i}.vcf`,
+      );
+      mockFetchSequence(makePropfindXml(hrefs), makeMultigetXml([]), makeMultigetXml([]));
+
+      await service.getContacts('contacts', { batchSize: 2 });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      const [, batch1Options] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      const [, batch2Options] = fetchSpy.mock.calls[2] as [string, RequestInit];
+      expect(batch1Options.body).toContain('contact-0.vcf');
+      expect(batch1Options.body).toContain('contact-1.vcf');
+      expect(batch2Options.body).toContain('contact-2.vcf');
+      expect(batch2Options.body).not.toContain('contact-0.vcf');
+    });
+
+    it('uses address book name in PROPFIND URL', async () => {
+      mockFetchSequence(makePropfindXml([]));
+
+      await service.getContacts('my-book');
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/my-book/'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getContactUids', () => {
+    const makePropfindXml = (hrefs: string[]): string => {
+      const responses = hrefs
+        .map((href) => `<d:response><d:href>${href}</d:href></d:response>`)
+        .join('');
+      return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">${responses}</d:multistatus>`;
+    };
+
+    it('returns UIDs extracted from .vcf hrefs', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () =>
+          Promise.resolve(
+            makePropfindXml([
+              '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf',
+              '/remote.php/dav/addressbooks/users/user/contacts/def-456.vcf',
+            ]),
+          ),
+      } as unknown as Response);
+
+      const uids = await service.getContactUids('contacts');
+
+      expect(uids).toEqual(['abc-123', 'def-456']);
+    });
+
+    it('returns empty array when no contacts exist', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makePropfindXml([])),
+      } as unknown as Response);
+
+      const uids = await service.getContactUids('contacts');
+
+      expect(uids).toEqual([]);
+    });
+
+    it('uses address book name in PROPFIND URL', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makePropfindXml([])),
+      } as unknown as Response);
+
+      await service.getContactUids('my-book');
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/my-book/'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getContactByUid', () => {
+    const makeMultigetXml = (addressDataItems: string[]): string => {
+      const responses = addressDataItems
+        .map(
+          (data) =>
+            `<d:response><d:propstat><d:prop><card:address-data>${data}</card:address-data></d:prop></d:propstat></d:response>`,
+        )
+        .join('');
+      return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">${responses}</d:multistatus>`;
+    };
+
+    it('sends multiget REPORT with the uid href', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([])),
+      } as unknown as Response);
+
+      await service.getContactByUid('contacts', 'abc-123');
+
+      const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/');
+      expect(options.method).toBe('REPORT');
+      expect(options.body).toContain('/contacts/abc-123.vcf');
+    });
+
+    it('returns undefined when no address-data in response', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([])),
+      } as unknown as Response);
+
+      const result = await service.getContactByUid('contacts', 'abc-123');
+
+      expect(result).toBeUndefined();
+    });
+
+    it('returns mapped contact when found', async () => {
+      const vCardText = 'BEGIN:VCARD\nVERSION:4.0\nEND:VCARD';
+      const mockCard = { UID: { value: 'abc-123' } };
+      const mockContact: NextcloudContact = {
+        uid: 'abc-123',
+        lastName: 'Doe',
+        firstName: 'John',
         address: '',
         postalCode: '',
         city: '',
         email: [],
         phoneNumber: [],
-      });
+      };
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([vCardText])),
+      } as unknown as Response);
+      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      mockMapper.mapContact.mockReturnValueOnce(mockContact);
 
-      const contacts = await service.getContacts('contacts');
+      const result = await service.getContactByUid('contacts', 'abc-123');
 
-      expect(contacts).toHaveLength(2);
-      expect(mockMapper.mapContact).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(mockContact);
     });
 
-    it('uses address book name in URL', async () => {
-      await service.getContacts('my-book');
+    it('uses default properties when no options given', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([])),
+      } as unknown as Response);
+
+      await service.getContactByUid('contacts', 'abc-123');
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      for (const prop of NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES) {
+        expect(options.body).toContain(prop);
+      }
+      expect(options.body).not.toContain('PHOTO');
+    });
+
+    it('requests custom properties when specified', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([])),
+      } as unknown as Response);
+
+      await service.getContactByUid('contacts', 'abc-123', {
+        properties: [...NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES, 'PHOTO'],
+      });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('PHOTO');
+    });
+
+    it('uses address book name in REPORT URL', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(makeMultigetXml([])),
+      } as unknown as Response);
+
+      await service.getContactByUid('my-book', 'abc-123');
 
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.stringContaining('/my-book/'),

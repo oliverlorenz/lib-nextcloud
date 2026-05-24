@@ -4,6 +4,27 @@ import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import type { NextcloudContact } from './NextcloudContact';
 import { NextcloudContactMapper } from './NextcloudContactMapper';
 
+export const NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES = [
+  'VERSION',
+  'UID',
+  'FN',
+  'N',
+  'TEL',
+  'EMAIL',
+  'BDAY',
+  'ADR',
+  'X-SOCIALPROFILE',
+] as const;
+
+export type GetContactOptions = {
+  properties?: readonly string[];
+};
+
+export type GetContactsOptions = {
+  batchSize?: number;
+  properties?: readonly string[];
+};
+
 export class NextcloudContactService {
   public static create(
     ncBasePath: string,
@@ -26,14 +47,74 @@ export class NextcloudContactService {
     private nextcloudCommonService: NextcloudHeaderService = new NextcloudHeaderService(),
   ) {}
 
-  private async getRawContacts(ncAddressBookName: string): Promise<VCard4[]> {
+  private async getContactHrefs(ncAddressBookName: string): Promise<string[]> {
+    const body = `<?xml version="1.0" encoding="UTF-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/></d:prop></d:propfind>`;
+    const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
+    headers.append('Content-Type', 'application/xml');
+    headers.append('Depth', '1');
+
     const response = await fetch(
-      `${this.ncBasePath}/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/?export`,
-      {
-        headers: this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword),
-      },
+      `${this.ncBasePath}/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/`,
+      { method: 'PROPFIND', headers, body },
     );
-    return parseVCards(await response.text()).vCards || [];
+    const xmlText = await response.text();
+    const hrefRegex = /<(?:[^:>\s]+:)?href>([^<]+\.vcf)<\/(?:[^:>\s]+:)?href>/g;
+    return [...xmlText.matchAll(hrefRegex)].map((m) => m[1].trim());
+  }
+
+  private async fetchContactsBatch(
+    ncAddressBookName: string,
+    hrefs: string[],
+    properties: readonly string[],
+  ): Promise<VCard4[]> {
+    const hrefElements = hrefs.map((href) => `  <d:href>${href}</d:href>`).join('\n');
+    const propElements = properties.map((p) => `      <card:prop name="${p}"/>`).join('\n');
+    const body = `<?xml version="1.0" encoding="UTF-8"?>
+<card:addressbook-multiget xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
+  <d:prop>
+    <d:getetag/>
+    <card:address-data>
+${propElements}
+    </card:address-data>
+  </d:prop>
+${hrefElements}
+</card:addressbook-multiget>`;
+
+    const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
+    headers.append('Content-Type', 'application/xml');
+    headers.append('Depth', '1');
+
+    const response = await fetch(
+      `${this.ncBasePath}/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/`,
+      { method: 'REPORT', headers, body },
+    );
+    const xmlText = await response.text();
+    const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
+    const vCards: VCard4[] = [];
+    for (const match of xmlText.matchAll(addressDataRegex)) {
+      const parsed = parseVCards(match[1].trim()).vCards;
+      if (parsed) vCards.push(...parsed);
+    }
+    return vCards;
+  }
+
+  public async getContactUids(ncAddressBookName: string): Promise<string[]> {
+    const hrefs = await this.getContactHrefs(ncAddressBookName);
+    return hrefs.map((href) => {
+      const filename = href.split('/').pop() ?? '';
+      return filename.replace(/\.vcf$/, '');
+    });
+  }
+
+  public async getContactByUid(
+    ncAddressBookName: string,
+    uid: string,
+    options?: GetContactOptions,
+  ): Promise<NextcloudContact | undefined> {
+    const href = `/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/${uid}.vcf`;
+    const properties = options?.properties ?? NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES;
+    const vCards = await this.fetchContactsBatch(ncAddressBookName, [href], properties);
+    return vCards[0] ? this.nextcloudContactMapper.mapContact(vCards[0]) : undefined;
   }
 
   public async getContactByPhoneNumber(
@@ -80,9 +161,20 @@ export class NextcloudContactService {
     return undefined;
   }
 
-  public async getContacts(ncAddressBookName: string): Promise<NextcloudContact[]> {
-    const contactList = await this.getRawContacts(ncAddressBookName);
-    return contactList.map((card) => this.nextcloudContactMapper.mapContact(card));
+  public async getContacts(
+    ncAddressBookName: string,
+    options?: GetContactsOptions,
+  ): Promise<NextcloudContact[]> {
+    const batchSize = options?.batchSize ?? 100;
+    const properties = options?.properties ?? NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES;
+    const hrefs = await this.getContactHrefs(ncAddressBookName);
+    const allVCards: VCard4[] = [];
+    for (let i = 0; i < hrefs.length; i += batchSize) {
+      const batch = hrefs.slice(i, i + batchSize);
+      const vCards = await this.fetchContactsBatch(ncAddressBookName, batch, properties);
+      allVCards.push(...vCards);
+    }
+    return allVCards.map((card) => this.nextcloudContactMapper.mapContact(card));
   }
 
   public async updateContact(
