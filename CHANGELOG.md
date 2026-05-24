@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.0...v1.0.1) (2026-05-24)
+
+### Documentation
+
+* document mandatory Issue-first and PR-only workflow ([#108](https://github.com/oliverlorenz/lib-nextcloud/issues/108)) ([0a58c22](https://github.com/oliverlorenz/lib-nextcloud/commit/0a58c22ccb923c8a4e6d93561fc9807bace9b09f))
+
 ## 1.0.0 (2026-05-24)
 
 ### Features
