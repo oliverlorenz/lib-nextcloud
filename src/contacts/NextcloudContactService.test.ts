@@ -653,6 +653,20 @@ describe('NextcloudContactService', () => {
         expect(body).toContain('EMAIL:john@example.com');
         expect(body).toContain('N:Doe;John;;;');
       });
+
+      it('removes grouped TEL properties (e.g. ITEM1.TEL) when updating phone numbers', async () => {
+        const vCardWithGroupedTel = baseVCard.replace(
+          'TEL;TYPE=CELL:+49111111111',
+          'ITEM1.TEL:+49111111111',
+        );
+        mockGetVCard(vCardWithGroupedTel);
+
+        await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+        const body = getPutBody();
+        expect(body).not.toContain('ITEM1.TEL');
+        expect(body).toContain('TEL:+49999999999');
+      });
     });
 
     describe('email update', () => {
@@ -695,6 +709,20 @@ describe('NextcloudContactService', () => {
         const body = getPutBody();
         expect(body).toContain('TEL;TYPE=CELL:+49111111111');
         expect(body).toContain('N:Doe;John;;;');
+      });
+
+      it('removes grouped EMAIL properties (e.g. ITEM1.EMAIL) when updating emails', async () => {
+        const vCardWithGroupedEmail = baseVCard.replace(
+          'EMAIL:john@example.com',
+          'ITEM1.EMAIL:john@example.com',
+        );
+        mockGetVCard(vCardWithGroupedEmail);
+
+        await service.updateContact('contacts', uid, { email: ['new@example.com'] });
+
+        const body = getPutBody();
+        expect(body).not.toContain('ITEM1.EMAIL');
+        expect(body).toContain('EMAIL:new@example.com');
       });
     });
 

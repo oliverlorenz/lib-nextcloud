@@ -224,14 +224,14 @@ ${hrefElements}
     let vCard = rawVCard;
 
     if (updates.phoneNumber !== undefined) {
-      vCard = vCard.replace(/^TEL[;:][^\r\n]*/gm, '');
+      vCard = vCard.replace(/^(?:[^\r\n:.;]+\.)?TEL[;:][^\r\n]*/gm, '');
       vCard = vCard.replace(/(\r?\n){2,}/g, '\r\n');
       const lines = updates.phoneNumber.map((n) => `TEL:${n}`).join('\r\n');
       if (lines) vCard = vCard.replace(/END:VCARD/, `${lines}\r\nEND:VCARD`);
     }
 
     if (updates.email !== undefined) {
-      vCard = vCard.replace(/^EMAIL[;:][^\r\n]*/gm, '');
+      vCard = vCard.replace(/^(?:[^\r\n:.;]+\.)?EMAIL[;:][^\r\n]*/gm, '');
       vCard = vCard.replace(/(\r?\n){2,}/g, '\r\n');
       const lines = updates.email.map((e) => `EMAIL:${e}`).join('\r\n');
       if (lines) vCard = vCard.replace(/END:VCARD/, `${lines}\r\nEND:VCARD`);
