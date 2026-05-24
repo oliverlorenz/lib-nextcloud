@@ -90,11 +90,27 @@ ${hrefElements}
       { method: 'REPORT', headers, body },
     );
     const xmlText = await response.text();
-    const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
+    const responseBlockRegex =
+      /<(?:[^:>\s]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[^:>\s]+:)?response>/g;
     const vCards: VCard4[] = [];
-    for (const match of xmlText.matchAll(addressDataRegex)) {
-      const parsed = parseVCards(this.decodeXmlEntities(match[1].trim())).vCards;
-      if (parsed) vCards.push(...parsed);
+    for (const responseMatch of xmlText.matchAll(responseBlockRegex)) {
+      const block = responseMatch[1];
+      const hrefMatch = block.match(/<(?:[^:>\s]+:)?href>([^<]*\.vcf)<\/(?:[^:>\s]+:)?href>/);
+      const addrMatch = block.match(
+        /<(?:[^:>\s]+:)?address-data[^>]*>([\s\S]*?)<\/(?:[^:>\s]+:)?address-data>/,
+      );
+      if (!addrMatch) continue;
+      const parsed = parseVCards(this.decodeXmlEntities(addrMatch[1].trim())).vCards;
+      if (!parsed) continue;
+      if (hrefMatch) {
+        const filenameUid = (hrefMatch[1].split('/').pop() ?? '').replace(/\.vcf$/, '');
+        for (const vCard of parsed) {
+          if (filenameUid && vCard.UID) vCard.UID.value = filenameUid;
+          vCards.push(vCard);
+        }
+      } else {
+        vCards.push(...parsed);
+      }
     }
     return vCards;
   }

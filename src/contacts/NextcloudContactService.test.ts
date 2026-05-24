@@ -54,12 +54,14 @@ describe('NextcloudContactService', () => {
       return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">${responses}</d:multistatus>`;
     };
 
-    const makeMultigetXml = (addressDataItems: string[]): string => {
-      const responses = addressDataItems
-        .map(
-          (data) =>
-            `<d:response><d:propstat><d:prop><card:address-data>${data}</card:address-data></d:prop></d:propstat></d:response>`,
-        )
+    const makeMultigetXml = (items: string[] | Array<{ data: string; href?: string }>): string => {
+      const responses = items
+        .map((item) => {
+          const data = typeof item === 'string' ? item : item.data;
+          const hrefEl =
+            typeof item === 'object' && item.href ? `<d:href>${item.href}</d:href>` : '';
+          return `<d:response>${hrefEl}<d:propstat><d:prop><card:address-data>${data}</card:address-data></d:prop></d:propstat></d:response>`;
+        })
         .join('');
       return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">${responses}</d:multistatus>`;
     };
@@ -167,6 +169,31 @@ describe('NextcloudContactService', () => {
       expect(mockMapper.mapContact).toHaveBeenCalledWith(mockCard);
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(mockContact);
+    });
+
+    it('overrides vCard UID with filename UID when href is present in response', async () => {
+      const href =
+        '/remote.php/dav/addressbooks/users/user/contacts/FA1978C1-D2A1-40C1-BC37-8E48F334DF7B.vcf';
+      const vCardText =
+        'BEGIN:VCARD\nVERSION:4.0\nUID:899D000B-3E03-7677-4DBF-E9327B043591\nEND:VCARD';
+      const mockCard = { UID: { value: '899D000B-3E03-7677-4DBF-E9327B043591' } };
+      const mockContact: NextcloudContact = {
+        uid: 'FA1978C1-D2A1-40C1-BC37-8E48F334DF7B',
+        lastName: '',
+        firstName: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        email: [],
+        phoneNumber: [],
+      };
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([{ data: vCardText, href }]));
+      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      mockMapper.mapContact.mockReturnValue(mockContact);
+
+      await service.getContacts('contacts');
+
+      expect(mockCard.UID.value).toBe('FA1978C1-D2A1-40C1-BC37-8E48F334DF7B');
     });
 
     it('batches hrefs according to batchSize option', async () => {
