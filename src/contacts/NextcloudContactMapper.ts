@@ -8,6 +8,7 @@ export class NextcloudContactMapper {
     const month = rawBirthday?.slice(-4).slice(0, -2);
     const year = rawBirthday?.slice(0, -4) !== '--' ? rawBirthday?.slice(0, -4) : '0001';
     return {
+      uid: card.UID?.value ?? '',
       lastName: card.N?.value.familyNames[0] || '',
       firstName: card.N?.value.givenNames[0] || '',
       address: card.ADR?.[0]?.value.streetAddress?.[0] ?? '',

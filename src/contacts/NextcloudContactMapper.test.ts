@@ -15,6 +15,7 @@ describe('NextcloudContactMapper', () => {
   describe('mapContact', () => {
     it('maps all fields from a complete VCard4', () => {
       const card = {
+        UID: { value: 'abc-def-123' },
         N: { value: { familyNames: ['Doe'], givenNames: ['John'] } },
         ADR: [
           {
@@ -33,6 +34,7 @@ describe('NextcloudContactMapper', () => {
 
       const contact = mapper.mapContact(card);
 
+      expect(contact.uid).toBe('abc-def-123');
       expect(contact.lastName).toBe('Doe');
       expect(contact.firstName).toBe('John');
       expect(contact.address).toBe('Main St 1');
@@ -42,6 +44,14 @@ describe('NextcloudContactMapper', () => {
       expect(contact.phoneNumber).toEqual(['+491234567890', '+490987654321']);
       expect(contact.birthday).toBeInstanceOf(Date);
       expect(contact.username).toBe('johndoe');
+    });
+
+    it('returns empty string for uid when UID is absent', () => {
+      const card = {} as unknown as VCard4;
+
+      const contact = mapper.mapContact(card);
+
+      expect(contact.uid).toBe('');
     });
 
     it('returns empty strings and arrays for missing optional fields', () => {
