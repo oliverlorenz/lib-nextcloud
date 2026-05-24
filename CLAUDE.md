@@ -17,6 +17,31 @@ Git hooks: pre-commit runs `test`; pre-push runs `lint:eslint && lint:prettier &
 
 **Before every commit:** run `npm run lint:eslint && npm run lint:prettier` and fix all issues first. The pre-push hook will catch failures anyway, but fixing them before commit avoids a broken commit history.
 
+## Release & versioning
+
+Releases are fully automated via `semantic-release`. No manual steps required after merging.
+
+**The PR title is the release signal.** Because all PRs are squash-merged, the PR title becomes the commit message on `main`. `semantic-release` reads these commits to determine the version bump, generate `CHANGELOG.md`, create the GitHub Release, and publish to GitHub Packages.
+
+| PR title prefix | Version bump | In release notes |
+|---|---|---|
+| `feat: …` | minor (1.**x**.0) | ✅ Features |
+| `fix: …` | patch (1.x.**x**) | ✅ Bug Fixes |
+| `perf: …` / `refactor: …` / `docs: …` | patch | ✅ |
+| `feat!: …` or `BREAKING CHANGE:` in body | major (**x**.0.0) | ✅ Breaking |
+| `chore: …` / `ci: …` / `test: …` / `build: …` | no release | — |
+
+**When writing PR titles:**
+- Use imperative, lowercase: `feat: add contact search` not `feat: Added contact search`
+- Scope is optional: `feat(contacts): add search` is fine
+- Breaking change via `!` suffix: `feat!: change constructor signature`
+- For breaking changes, also fill in the "Breaking changes" section of the PR template with migration instructions — this text ends up in the release notes
+
+**Do not:**
+- Create `chore(release): …` commits manually — those are written back by `semantic-release`
+- Bump the version in `package.json` manually — `semantic-release` owns the version
+- Edit `CHANGELOG.md` manually — it is auto-generated
+
 ## Domain structure (DDD-inspired)
 
 Each domain lives in its own folder and is self-contained:

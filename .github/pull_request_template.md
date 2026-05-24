@@ -1,3 +1,10 @@
+<!-- PR title = squash-merge commit message → drives automated versioning.
+     Format:   type: short description          (e.g. feat: add contact search)
+     Breaking: feat!: short description         (→ major release)
+     No release: chore: / ci: / test: / build:
+
+     Allowed types: feat · fix · perf · refactor · docs · chore · ci · test · build -->
+
 ## What changed and why
 
 <!-- Briefly describe what this PR does and the motivation behind it. Link the related issue. -->
@@ -35,7 +42,4 @@ N/A
 - [ ] No new cross-cutting dependencies outside of `shared/`
 
 ### Release
-- [ ] PR title follows Conventional Commits: `type: short description`
-  - `feat:` → minor release · `fix:` → patch · `feat!:` → major (breaking)
-  - `chore:` / `ci:` / `test:` / `build:` → no release
 - [ ] README.md updated if public API changed

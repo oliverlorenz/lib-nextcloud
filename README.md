@@ -308,3 +308,17 @@ npm run lint:types
 ## Contributing
 
 Bug reports and pull requests are welcome at [github.com/oliverlorenz/lib-nextcloud](https://github.com/oliverlorenz/lib-nextcloud/issues).
+
+### Pull request titles
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/). The PR title becomes the squash-merge commit message and drives automated versioning — no labels needed.
+
+| PR title prefix | Version bump | Appears in release notes |
+|---|---|---|
+| `feat: …` | minor | ✅ Features |
+| `fix: …` | patch | ✅ Bug Fixes |
+| `perf: …` / `refactor: …` / `docs: …` | patch | ✅ |
+| `feat!: …` or `BREAKING CHANGE:` in body | **major** | ✅ Breaking Changes |
+| `chore: …` / `ci: …` / `test: …` / `build: …` | none | — |
+
+CI enforces the format. On merge to `main`, a GitHub Release and a `CHANGELOG.md` entry are created automatically.
