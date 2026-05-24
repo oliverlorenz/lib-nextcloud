@@ -144,20 +144,35 @@ const contacts = NextcloudContactService.create('https://nc.example.com', 'user'
 |---|---|
 | `getContacts(addressBook)` | Fetch all contacts from an address book |
 | `getContactByPhoneNumber(addressBook, phoneNumber)` | Find a contact by phone number |
+| `updateContact(addressBook, uid, updates)` | Update individual fields of an existing contact |
 
 **Examples**
 
 ```ts
 // All contacts
 const all = await contacts.getContacts('contacts');
-// [{ firstName, lastName, address, postalCode, city, email[], phoneNumber[], birthday?, username? }]
+// [{ uid, firstName, lastName, address, postalCode, city, email[], phoneNumber[], birthday?, username? }]
 
 // Lookup by phone number (E.164 format recommended)
 const contact = await contacts.getContactByPhoneNumber('contacts', '+491511234567');
 if (contact) {
   console.log(`${contact.firstName} ${contact.lastName}`);
 }
+
+// Update individual fields — only the provided fields are changed
+await contacts.updateContact('contacts', contact.uid, {
+  phoneNumber: ['+491511234567', '+4930987654'],
+});
+
+// Update name and email simultaneously
+await contacts.updateContact('contacts', contact.uid, {
+  firstName: 'Jane',
+  lastName: 'Smith',
+  email: ['jane.smith@example.com'],
+});
 ```
+
+`updateContact` accepts any subset of the `NextcloudContact` fields (except `uid`). Multi-value fields (`phoneNumber`, `email`) replace the full list. Compound fields (`address`, `postalCode`, `city` share the same vCard ADR property; `firstName` and `lastName` share N/FN) are merged with the existing values — unspecified components are preserved.
 
 ---
 
