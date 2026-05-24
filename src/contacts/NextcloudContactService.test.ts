@@ -196,6 +196,20 @@ describe('NextcloudContactService', () => {
         expect.any(Object),
       );
     });
+
+    it('decodes XML entities in address-data before passing to parseVCards', async () => {
+      const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
+      const vCardWithEntities =
+        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD';
+      mockFetchSequence(makePropfindXml([href]), makeMultigetXml([vCardWithEntities]));
+      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+
+      await service.getContacts('contacts');
+
+      expect(parseVCards).toHaveBeenCalledWith(
+        'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Max & Moritz\r\nEND:VCARD',
+      );
+    });
   });
 
   describe('getContactUids', () => {
@@ -466,6 +480,19 @@ describe('NextcloudContactService', () => {
       await service.getContactByPhoneNumber('contacts', '+493333333333');
 
       expect(parseVCards).toHaveBeenCalledWith(vCardText);
+    });
+
+    it('decodes XML entities in address-data before passing to parseVCards', async () => {
+      const vCardWithEntities =
+        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD';
+      mockFetchXml(makeMultiStatusXml(vCardWithEntities));
+      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+
+      await service.getContactByPhoneNumber('contacts', '+493333333333');
+
+      expect(parseVCards).toHaveBeenCalledWith(
+        'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Max & Moritz\r\nEND:VCARD',
+      );
     });
 
     it('escapes XML special characters in phone number', async () => {

@@ -92,7 +92,7 @@ ${hrefElements}
     const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
     const vCards: VCard4[] = [];
     for (const match of xmlText.matchAll(addressDataRegex)) {
-      const parsed = parseVCards(match[1].trim()).vCards;
+      const parsed = parseVCards(this.decodeXmlEntities(match[1].trim())).vCards;
       if (parsed) vCards.push(...parsed);
     }
     return vCards;
@@ -152,7 +152,7 @@ ${hrefElements}
     const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
 
     for (const match of xmlText.matchAll(addressDataRegex)) {
-      const vCardText = match[1].trim();
+      const vCardText = this.decodeXmlEntities(match[1].trim());
       const parsed = parseVCards(vCardText).vCards;
       if (parsed && parsed.length > 0) {
         return this.nextcloudContactMapper.mapContact(parsed[0]);
@@ -289,6 +289,16 @@ ${hrefElements}
       vCard = vCard.replace(/END:VCARD/, `${newFN}\r\nEND:VCARD`);
     }
     return vCard;
+  }
+
+  private decodeXmlEntities(text: string): string {
+    return text
+      .replace(/&#13;/g, '\r')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
   }
 
   private updateVCardAdrField(
