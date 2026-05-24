@@ -1,4 +1,5 @@
 export type NextcloudContact = {
+  uid: string;
   lastName: string;
   firstName: string;
   address: string;

@@ -61,6 +61,7 @@ describe('NextcloudContactService', () => {
     it('maps each vCard to a contact via mapper', async () => {
       const mockCard = { N: { value: { familyNames: ['Doe'], givenNames: ['John'] } } };
       const mockContact: NextcloudContact = {
+        uid: 'abc-123',
         lastName: 'Doe',
         firstName: 'John',
         address: '',
@@ -206,6 +207,7 @@ describe('NextcloudContactService', () => {
       const vCardText = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
       const mockCard = { FN: { value: 'John Doe' } };
       const mockContact: NextcloudContact = {
+        uid: 'abc-123',
         lastName: 'Doe',
         firstName: 'John',
         address: '',
@@ -251,6 +253,319 @@ describe('NextcloudContactService', () => {
         expect.stringContaining('/my-book/'),
         expect.any(Object),
       );
+    });
+  });
+
+  describe('updateContact', () => {
+    const uid = 'test-uid-123';
+    const baseVCard = [
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      `UID:${uid}`,
+      'FN:John Doe',
+      'N:Doe;John;;;',
+      'TEL;TYPE=CELL:+49111111111',
+      'EMAIL:john@example.com',
+      'BDAY:19900115',
+      'ADR:;;Main St;Berlin;;12345;Germany',
+      'X-SOCIALPROFILE:johndoe',
+      'END:VCARD',
+    ].join('\r\n');
+
+    const mockGetVCard = (vCard: string): void => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(vCard),
+      } as unknown as Response);
+      fetchSpy.mockResolvedValueOnce({} as Response);
+    };
+
+    const getPutBody = (): string => {
+      const [, putCall] = fetchSpy.mock.calls as [string, RequestInit][];
+      return putCall[1].body as string;
+    };
+
+    it('fetches the vCard via GET before updating', async () => {
+      mockGetVCard(baseVCard);
+
+      await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+      expect(fetchSpy.mock.calls[0][0]).toBe(
+        `https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/${uid}.vcf`,
+      );
+    });
+
+    it('sends PUT to the correct contact URL', async () => {
+      mockGetVCard(baseVCard);
+
+      await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+      const [putUrl, putOptions] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      expect(putUrl).toBe(
+        `https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/${uid}.vcf`,
+      );
+      expect(putOptions.method).toBe('PUT');
+    });
+
+    it('sends Content-Type: text/vcard; charset=utf-8 header', async () => {
+      mockGetVCard(baseVCard);
+
+      await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+      const [, putOptions] = fetchSpy.mock.calls[1] as [string, RequestInit];
+      const headers = putOptions.headers as Headers;
+      expect(headers.get('Content-Type')).toBe('text/vcard; charset=utf-8');
+    });
+
+    it('uses address book name in both GET and PUT URLs', async () => {
+      mockGetVCard(baseVCard);
+
+      await service.updateContact('my-book', uid, { phoneNumber: ['+49999999999'] });
+
+      expect(fetchSpy.mock.calls[0][0]).toContain('/my-book/');
+      expect(fetchSpy.mock.calls[1][0]).toContain('/my-book/');
+    });
+
+    describe('phoneNumber update', () => {
+      it('replaces all TEL lines with new phone numbers', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+        const body = getPutBody();
+        expect(body).toContain('TEL:+49999999999');
+        expect(body).not.toContain('+49111111111');
+      });
+
+      it('adds multiple TEL lines when multiple phone numbers are provided', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, {
+          phoneNumber: ['+49111000001', '+49111000002'],
+        });
+
+        const body = getPutBody();
+        expect(body).toContain('TEL:+49111000001');
+        expect(body).toContain('TEL:+49111000002');
+      });
+
+      it('removes all TEL lines when empty array is provided', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { phoneNumber: [] });
+
+        const body = getPutBody();
+        expect(body).not.toMatch(/^TEL[;:]/m);
+      });
+
+      it('preserves other fields when updating phone numbers', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] });
+
+        const body = getPutBody();
+        expect(body).toContain('EMAIL:john@example.com');
+        expect(body).toContain('N:Doe;John;;;');
+      });
+    });
+
+    describe('email update', () => {
+      it('replaces all EMAIL lines with new emails', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { email: ['new@example.com'] });
+
+        const body = getPutBody();
+        expect(body).toContain('EMAIL:new@example.com');
+        expect(body).not.toContain('john@example.com');
+      });
+
+      it('adds multiple EMAIL lines when multiple emails are provided', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, {
+          email: ['a@example.com', 'b@example.com'],
+        });
+
+        const body = getPutBody();
+        expect(body).toContain('EMAIL:a@example.com');
+        expect(body).toContain('EMAIL:b@example.com');
+      });
+
+      it('removes all EMAIL lines when empty array is provided', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { email: [] });
+
+        const body = getPutBody();
+        expect(body).not.toMatch(/^EMAIL[;:]/m);
+      });
+
+      it('preserves other fields when updating emails', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { email: ['new@example.com'] });
+
+        const body = getPutBody();
+        expect(body).toContain('TEL;TYPE=CELL:+49111111111');
+        expect(body).toContain('N:Doe;John;;;');
+      });
+    });
+
+    describe('lastName update', () => {
+      it('updates the family name in the N property', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { lastName: 'Smith' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Smith;John/m);
+      });
+
+      it('preserves existing firstName when only lastName is updated', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { lastName: 'Smith' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Smith;John/m);
+      });
+
+      it('updates the FN property to match new name', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { lastName: 'Smith' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^FN:John Smith/m);
+      });
+    });
+
+    describe('firstName update', () => {
+      it('updates the given name in the N property', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { firstName: 'Jane' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Doe;Jane/m);
+      });
+
+      it('preserves existing lastName when only firstName is updated', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { firstName: 'Jane' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Doe;Jane/m);
+      });
+
+      it('updates both N and FN when both firstName and lastName are provided', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { firstName: 'Jane', lastName: 'Smith' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Smith;Jane/m);
+        expect(body).toMatch(/^FN:Jane Smith/m);
+      });
+
+      it('adds N and FN lines when neither is present in the vCard', async () => {
+        const minimalVCard = 'BEGIN:VCARD\r\nVERSION:4.0\r\nEND:VCARD';
+        mockGetVCard(minimalVCard);
+
+        await service.updateContact('contacts', uid, { firstName: 'Jane', lastName: 'Smith' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^N:Smith;Jane/m);
+        expect(body).toMatch(/^FN:Jane Smith/m);
+      });
+    });
+
+    describe('birthday update', () => {
+      it('replaces existing BDAY line', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { birthday: new Date(1995, 5, 15) });
+
+        const body = getPutBody();
+        expect(body).toContain('BDAY:19950615');
+        expect(body).not.toContain('BDAY:19900115');
+      });
+
+      it('adds BDAY line when not present', async () => {
+        const vCardWithoutBday = baseVCard.replace('BDAY:19900115\r\n', '');
+        mockGetVCard(vCardWithoutBday);
+
+        await service.updateContact('contacts', uid, { birthday: new Date(1995, 5, 15) });
+
+        const body = getPutBody();
+        expect(body).toContain('BDAY:19950615');
+      });
+    });
+
+    describe('address update', () => {
+      it('updates street address while preserving other ADR components', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { address: 'New Street 42' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^ADR[^\r\n]*:;;New Street 42;Berlin;;12345;Germany/m);
+      });
+
+      it('updates postal code while preserving other ADR components', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { postalCode: '99999' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^ADR[^\r\n]*:;;Main St;Berlin;;99999;Germany/m);
+      });
+
+      it('updates city while preserving other ADR components', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { city: 'Hamburg' });
+
+        const body = getPutBody();
+        expect(body).toMatch(/^ADR[^\r\n]*:;;Main St;Hamburg;;12345;Germany/m);
+      });
+
+      it('adds ADR line when not present', async () => {
+        const vCardWithoutAdr = baseVCard.replace('ADR:;;Main St;Berlin;;12345;Germany\r\n', '');
+        mockGetVCard(vCardWithoutAdr);
+
+        await service.updateContact('contacts', uid, {
+          address: 'New St',
+          city: 'Munich',
+          postalCode: '80001',
+        });
+
+        const body = getPutBody();
+        expect(body).toContain('ADR:;;New St;Munich;;80001;');
+      });
+    });
+
+    describe('username update', () => {
+      it('replaces existing X-SOCIALPROFILE line', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { username: 'newhandle' });
+
+        const body = getPutBody();
+        expect(body).toContain('X-SOCIALPROFILE:newhandle');
+        expect(body).not.toContain('X-SOCIALPROFILE:johndoe');
+      });
+
+      it('adds X-SOCIALPROFILE line when not present', async () => {
+        const vCardWithoutProfile = baseVCard.replace('X-SOCIALPROFILE:johndoe\r\n', '');
+        mockGetVCard(vCardWithoutProfile);
+
+        await service.updateContact('contacts', uid, { username: 'newhandle' });
+
+        const body = getPutBody();
+        expect(body).toContain('X-SOCIALPROFILE:newhandle');
+      });
     });
   });
 });
