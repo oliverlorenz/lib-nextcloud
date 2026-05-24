@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.1...v1.0.2) (2026-05-24)
+
+### Bug Fixes
+
+* decode XML entities in vCard text from CardDAV REPORT responses ([#114](https://github.com/oliverlorenz/lib-nextcloud/issues/114)) ([f626771](https://github.com/oliverlorenz/lib-nextcloud/commit/f626771ac9da13a02436137d2b9493ef90edcb7d)), closes [#13](https://github.com/oliverlorenz/lib-nextcloud/issues/13) [#113](https://github.com/oliverlorenz/lib-nextcloud/issues/113)
+
 ## [1.0.1](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.0...v1.0.1) (2026-05-24)
 
 ### Documentation
