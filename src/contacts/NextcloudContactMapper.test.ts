@@ -142,5 +142,23 @@ describe('NextcloudContactMapper', () => {
 
       expect(contact.photo).toBeUndefined();
     });
+
+    it('maps organization from ORG property', () => {
+      const card = {
+        ORG: [{ value: ['Acme Corp'] }],
+      } as unknown as VCard4;
+
+      const contact = mapper.mapContact(card);
+
+      expect(contact.organization).toBe('Acme Corp');
+    });
+
+    it('returns undefined organization when ORG is absent', () => {
+      const card = {} as unknown as VCard4;
+
+      const contact = mapper.mapContact(card);
+
+      expect(contact.organization).toBeUndefined();
+    });
   });
 });

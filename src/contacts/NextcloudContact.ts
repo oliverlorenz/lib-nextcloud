@@ -10,4 +10,5 @@ export type NextcloudContact = {
   birthday?: Date;
   username?: string;
   photo?: string;
+  organization?: string;
 };

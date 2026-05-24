@@ -19,6 +19,7 @@ export class NextcloudContactMapper {
       birthday: rawBirthday ? new Date(Number(year), Number(month) - 1, Number(day)) : undefined,
       username: card.x?.X_SOCIALPROFILE?.[0]?.value,
       photo: card.PHOTO?.[0]?.value ?? undefined,
+      organization: card.ORG?.[0]?.value[0] ?? undefined,
     };
   }
 }

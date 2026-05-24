@@ -14,6 +14,7 @@ export const NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES = [
   'BDAY',
   'ADR',
   'X-SOCIALPROFILE',
+  'ORG',
 ] as const;
 
 export type GetContactOptions = {
@@ -249,6 +250,14 @@ ${hrefElements}
         );
       } else {
         vCard = vCard.replace(/END:VCARD/, `X-SOCIALPROFILE:${updates.username}\r\nEND:VCARD`);
+      }
+    }
+
+    if (updates.organization !== undefined) {
+      if (/^ORG[;:]/m.test(vCard)) {
+        vCard = vCard.replace(/^ORG[;:][^\r\n]*/m, `ORG:${updates.organization}`);
+      } else {
+        vCard = vCard.replace(/END:VCARD/, `ORG:${updates.organization}\r\nEND:VCARD`);
       }
     }
 

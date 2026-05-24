@@ -827,5 +827,27 @@ describe('NextcloudContactService', () => {
         expect(body).toContain('X-SOCIALPROFILE:newhandle');
       });
     });
+
+    describe('organization update', () => {
+      it('replaces existing ORG line', async () => {
+        const vCardWithOrg = baseVCard.replace('END:VCARD', 'ORG:Old Corp\r\nEND:VCARD');
+        mockGetVCard(vCardWithOrg);
+
+        await service.updateContact('contacts', uid, { organization: 'New Corp' });
+
+        const body = getPutBody();
+        expect(body).toContain('ORG:New Corp');
+        expect(body).not.toContain('ORG:Old Corp');
+      });
+
+      it('adds ORG line when not present', async () => {
+        mockGetVCard(baseVCard);
+
+        await service.updateContact('contacts', uid, { organization: 'Acme Corp' });
+
+        const body = getPutBody();
+        expect(body).toContain('ORG:Acme Corp');
+      });
+    });
   });
 });
