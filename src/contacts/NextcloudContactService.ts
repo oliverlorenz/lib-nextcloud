@@ -156,10 +156,7 @@ export class NextcloudContactService {
           `X-SOCIALPROFILE:${updates.username}`,
         );
       } else {
-        vCard = vCard.replace(
-          /END:VCARD/,
-          `X-SOCIALPROFILE:${updates.username}\r\nEND:VCARD`,
-        );
+        vCard = vCard.replace(/END:VCARD/, `X-SOCIALPROFILE:${updates.username}\r\nEND:VCARD`);
       }
     }
 
