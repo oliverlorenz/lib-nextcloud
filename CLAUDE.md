@@ -15,6 +15,8 @@ npm run lint:types    # tsc --noEmit + tsc-strict plugin (all 26 files must pass
 
 Git hooks: pre-commit runs `test`; pre-push runs `lint:eslint && lint:prettier && test`.
 
+**Before every commit:** run `npm run lint:eslint && npm run lint:prettier` and fix all issues first. The pre-push hook will catch failures anyway, but fixing them before commit avoids a broken commit history.
+
 ## Domain structure (DDD-inspired)
 
 Each domain lives in its own folder and is self-contained:
@@ -126,6 +128,10 @@ npm install   # no flags needed
 ```
 
 `eslint-plugin-import` was removed — it was never referenced in `eslint.config.mjs` and its peer dep constraint blocks installation with ESLint 10.
+
+## README
+
+Every code change that adds, removes, or alters public API behaviour must also update `README.md`. This includes new methods, changed signatures, new types, and changed constructor parameters. The README is the primary documentation for library consumers.
 
 ## Requirements
 
