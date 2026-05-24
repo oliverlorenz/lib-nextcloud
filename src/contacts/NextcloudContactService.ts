@@ -100,7 +100,7 @@ ${hrefElements}
         /<(?:[^:>\s]+:)?address-data[^>]*>([\s\S]*?)<\/(?:[^:>\s]+:)?address-data>/,
       );
       if (!addrMatch) continue;
-      const parsed = parseVCards(this.decodeXmlEntities(addrMatch[1].trim())).vCards;
+      const parsed = parseVCards(this.decodeXmlEntities(addrMatch[1]).trim()).vCards;
       if (!parsed) continue;
       if (hrefMatch) {
         const filenameUid = (hrefMatch[1].split('/').pop() ?? '').replace(/\.vcf$/, '');
@@ -169,7 +169,7 @@ ${hrefElements}
     const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
 
     for (const match of xmlText.matchAll(addressDataRegex)) {
-      const vCardText = this.decodeXmlEntities(match[1].trim());
+      const vCardText = this.decodeXmlEntities(match[1]).trim();
       const parsed = parseVCards(vCardText).vCards;
       if (parsed && parsed.length > 0) {
         return this.nextcloudContactMapper.mapContact(parsed[0]);
