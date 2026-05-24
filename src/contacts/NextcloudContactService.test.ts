@@ -227,7 +227,7 @@ describe('NextcloudContactService', () => {
     it('decodes XML entities in address-data before passing to parseVCards', async () => {
       const href = '/remote.php/dav/addressbooks/users/user/contacts/abc-123.vcf';
       const vCardWithEntities =
-        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD';
+        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD&#13;\n';
       mockFetchSequence(makePropfindXml([href]), makeMultigetXml([vCardWithEntities]));
       (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
 
@@ -511,7 +511,7 @@ describe('NextcloudContactService', () => {
 
     it('decodes XML entities in address-data before passing to parseVCards', async () => {
       const vCardWithEntities =
-        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD';
+        'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD&#13;\n';
       mockFetchXml(makeMultiStatusXml(vCardWithEntities));
       (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
 
