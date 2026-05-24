@@ -1,3 +1,9 @@
+## [1.1.3](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.2...v1.1.3) (2026-05-24)
+
+### Bug Fixes
+
+* **contacts:** remove grouped TEL/EMAIL properties (e.g. ITEM1.TEL) on update ([#122](https://github.com/oliverlorenz/lib-nextcloud/issues/122)) ([0de86e4](https://github.com/oliverlorenz/lib-nextcloud/commit/0de86e4f20bab64837fbc2d7d580b0106c0acd6c)), closes [#121](https://github.com/oliverlorenz/lib-nextcloud/issues/121)
+
 ## [1.1.2](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.1...v1.1.2) (2026-05-24)
 
 ### Bug Fixes
