@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.9...v1.1.0) (2026-05-24)
+
+### Features
+
+* **contacts:** add organization field to NextcloudContact ([#116](https://github.com/oliverlorenz/lib-nextcloud/issues/116)) ([bca2c69](https://github.com/oliverlorenz/lib-nextcloud/commit/bca2c69a884f7d461ed4d016dd53283ceacf2bd9)), closes [#115](https://github.com/oliverlorenz/lib-nextcloud/issues/115)
+
 ## [1.0.2](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.0.1...v1.0.2) (2026-05-24)
 
 ### Bug Fixes
