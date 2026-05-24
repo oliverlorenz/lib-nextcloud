@@ -1,20 +1,22 @@
+<!-- PR title = squash-merge commit message → drives automated versioning.
+     Format:   type: short description          (e.g. feat: add contact search)
+     Breaking: feat!: short description         (→ major release)
+     No release: chore: / ci: / test: / build:
+
+     Allowed types: feat · fix · perf · refactor · docs · chore · ci · test · build -->
+
 ## What changed and why
 
 <!-- Briefly describe what this PR does and the motivation behind it. Link the related issue. -->
 
 Closes #
 
-## Type of change
+## Breaking changes
 
-<!-- Add the matching label to this PR (required for release-drafter). -->
+<!-- Required when the PR title uses ! (e.g. feat!:) or the body contains BREAKING CHANGE:.
+     Describe exactly what breaks and how consumers need to migrate. -->
 
-- [ ] `type: breaking` — breaking API change
-- [ ] `type: feature` — new functionality
-- [ ] `type: bug` — bug fix
-- [ ] `type: maintenance` — refactor, chore, build
-- [ ] `type: docs` — documentation only
-- [ ] `type: dependencies` — dependency updates
-- [ ] `type: security` — security fix
+N/A
 
 ## Checklist
 
@@ -32,9 +34,12 @@ Closes #
 ### Linting
 - [ ] `npm run lint:eslint` passes
 - [ ] `npm run lint:prettier` passes
-- [ ] `npm run lint:types` passes (all 26 files must pass strict type check)
+- [ ] `npm run lint:types` passes
 
 ### Domain rules
 - [ ] New service follows the `static create(...)` factory + DI-constructor pattern
 - [ ] Cross-domain imports go through barrel `index.ts`, never directly into another domain's files
 - [ ] No new cross-cutting dependencies outside of `shared/`
+
+### Release
+- [ ] README.md updated if public API changed
