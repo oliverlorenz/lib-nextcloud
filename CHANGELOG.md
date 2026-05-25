@@ -1,3 +1,9 @@
+## [1.1.4](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.3...v1.1.4) (2026-05-25)
+
+### Bug Fixes
+
+* **contacts:** throw on non-2xx HTTP response in updateContact ([#124](https://github.com/oliverlorenz/lib-nextcloud/issues/124)) ([cfcbc78](https://github.com/oliverlorenz/lib-nextcloud/commit/cfcbc781b0ee3efe5f95ee0353b747f8d1e336d2)), closes [#123](https://github.com/oliverlorenz/lib-nextcloud/issues/123)
+
 ## [1.1.3](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.2...v1.1.3) (2026-05-24)
 
 ### Bug Fixes
