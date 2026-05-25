@@ -563,7 +563,7 @@ describe('NextcloudContactService', () => {
       fetchSpy.mockResolvedValueOnce({
         text: () => Promise.resolve(vCard),
       } as unknown as Response);
-      fetchSpy.mockResolvedValueOnce({} as Response);
+      fetchSpy.mockResolvedValueOnce({ ok: true } as unknown as Response);
     };
 
     const getPutBody = (): string => {
@@ -610,6 +610,23 @@ describe('NextcloudContactService', () => {
 
       expect(fetchSpy.mock.calls[0][0]).toContain('/my-book/');
       expect(fetchSpy.mock.calls[1][0]).toContain('/my-book/');
+    });
+
+    it('throws an error including the status code and body when PUT returns a non-2xx response', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(baseVCard),
+      } as unknown as Response);
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: () => Promise.resolve('VCard object exceeds 5242880 bytes'),
+      } as unknown as Response);
+
+      await expect(
+        service.updateContact('contacts', uid, { phoneNumber: ['+49999999999'] }),
+      ).rejects.toThrow(
+        `Failed to update contact "${uid}": HTTP 403 — VCard object exceeds 5242880 bytes`,
+      );
     });
 
     describe('phoneNumber update', () => {

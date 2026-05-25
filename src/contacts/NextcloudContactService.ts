@@ -203,10 +203,16 @@ ${hrefElements}
     const updatedVCard = this.applyContactUpdates(rawVCard, updates);
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
     headers.append('Content-Type', 'text/vcard; charset=utf-8');
-    await fetch(
+    const response = await fetch(
       `${this.ncBasePath}/remote.php/dav/addressbooks/users/${this.ncUsername}/${ncAddressBookName}/${contactUid}.vcf`,
       { method: 'PUT', headers, body: updatedVCard },
     );
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(
+        `Failed to update contact "${contactUid}": HTTP ${response.status} — ${body}`,
+      );
+    }
   }
 
   private async getRawVCardText(ncAddressBookName: string, uid: string): Promise<string> {
