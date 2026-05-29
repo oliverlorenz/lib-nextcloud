@@ -1,6 +1,7 @@
 import { NextcloudFileService } from './NextcloudFileService';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { createClient } from 'webdav';
+import * as nodeFsModule from 'fs';
 
 jest.mock('webdav', () => ({
   AuthType: { Password: 'password' },
@@ -361,6 +362,207 @@ describe('NextcloudFileService', () => {
       expect(result).toBe('/target.txt');
       const uploadedBuffer = mockWebdavClient.putFileContents.mock.calls[0][1] as Buffer;
       expect(uploadedBuffer.toString()).toBe('Hello World, welcome to Berlin!');
+    });
+  });
+
+  describe('appendToFile', () => {
+    it('appends line to file ending with newline', async () => {
+      mockWebdavClient.getFileContents.mockResolvedValue(Buffer.from('existing\n'));
+
+      await service.appendToFile('/log.txt', 'new line');
+
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/log.txt',
+        Buffer.from('existing\nnew line\n'),
+        {},
+      );
+    });
+
+    it('inserts newline before line when file does not end with newline', async () => {
+      mockWebdavClient.getFileContents.mockResolvedValue(Buffer.from('existing'));
+
+      await service.appendToFile('/log.txt', 'new line');
+
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/log.txt',
+        Buffer.from('existing\nnew line\n'),
+        {},
+      );
+    });
+
+    it('appends line to empty file', async () => {
+      mockWebdavClient.getFileContents.mockResolvedValue(Buffer.from(''));
+
+      await service.appendToFile('/log.txt', 'first line');
+
+      expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+        '/log.txt',
+        Buffer.from('first line\n'),
+        {},
+      );
+    });
+
+    describe('with localPath', () => {
+      let fsReadFileSpy: jest.SpyInstance;
+      let fsWriteFileSpy: jest.SpyInstance;
+
+      beforeEach(() => {
+        fsReadFileSpy = jest
+          .spyOn(nodeFsModule.promises, 'readFile')
+          .mockResolvedValue(Buffer.from('local content\n') as unknown as string);
+        fsWriteFileSpy = jest
+          .spyOn(nodeFsModule.promises, 'writeFile')
+          .mockResolvedValue(undefined);
+      });
+
+      it('reads from local mirror path instead of downloading', async () => {
+        await service.appendToFile('/logs/app.txt', 'new line', '/local/mirror');
+
+        expect(fsReadFileSpy).toHaveBeenCalledWith('/local/mirror/logs/app.txt');
+        expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      });
+
+      it('writes updated content back to local mirror path', async () => {
+        await service.appendToFile('/logs/app.txt', 'new line', '/local/mirror');
+
+        expect(fsWriteFileSpy).toHaveBeenCalledWith(
+          '/local/mirror/logs/app.txt',
+          Buffer.from('local content\nnew line\n'),
+        );
+      });
+
+      it('uploads updated content to Nextcloud', async () => {
+        await service.appendToFile('/logs/app.txt', 'new line', '/local/mirror');
+
+        expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+          '/logs/app.txt',
+          Buffer.from('local content\nnew line\n'),
+          {},
+        );
+      });
+    });
+  });
+
+  describe('mirrorDirectory', () => {
+    let fsMkdirSpy: jest.SpyInstance;
+    let fsStatSpy: jest.SpyInstance;
+    let fsWriteFileSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      fsMkdirSpy = jest
+        .spyOn(nodeFsModule.promises, 'mkdir')
+        .mockResolvedValue(undefined as unknown as string);
+      fsStatSpy = jest
+        .spyOn(nodeFsModule.promises, 'stat')
+        .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+      fsWriteFileSpy = jest.spyOn(nodeFsModule.promises, 'writeFile').mockResolvedValue(undefined);
+    });
+
+    it('creates local root directory', async () => {
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([]);
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(fsMkdirSpy).toHaveBeenCalledWith('/local/Photos', { recursive: true });
+    });
+
+    it('downloads missing files', async () => {
+      const buffer = Buffer.from('image data');
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([
+        {
+          type: 'file',
+          filename: '/Photos/image.jpg',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          size: 100,
+          etag: null,
+        },
+      ]);
+      mockWebdavClient.getFileContents.mockResolvedValue(buffer);
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(mockWebdavClient.getFileContents).toHaveBeenCalledWith('/Photos/image.jpg');
+      expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/image.jpg', buffer);
+    });
+
+    it('skips files already up to date', async () => {
+      const remoteLastMod = 'Thu, 01 Jan 2026 00:00:00 GMT';
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([
+        {
+          type: 'file',
+          filename: '/Photos/image.jpg',
+          lastmod: remoteLastMod,
+          size: 100,
+          etag: null,
+        },
+      ]);
+      fsStatSpy.mockResolvedValue({ mtimeMs: new Date(remoteLastMod).getTime() + 1000 });
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      expect(fsWriteFileSpy).not.toHaveBeenCalled();
+    });
+
+    it('re-downloads files where remote is newer', async () => {
+      const remoteLastMod = 'Thu, 01 Jan 2026 12:00:00 GMT';
+      const buffer = Buffer.from('updated image');
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([
+        {
+          type: 'file',
+          filename: '/Photos/image.jpg',
+          lastmod: remoteLastMod,
+          size: 100,
+          etag: null,
+        },
+      ]);
+      fsStatSpy.mockResolvedValue({ mtimeMs: new Date('Thu, 01 Jan 2026 00:00:00 GMT').getTime() });
+      mockWebdavClient.getFileContents.mockResolvedValue(buffer);
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/image.jpg', buffer);
+    });
+
+    it('creates local directories for remote directories', async () => {
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([
+        {
+          type: 'directory',
+          filename: '/Photos/2024',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          size: 0,
+          etag: null,
+        },
+      ]);
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(fsMkdirSpy).toHaveBeenCalledWith('/local/Photos/2024', { recursive: true });
+    });
+
+    it('mirrors nested files preserving subdirectory structure', async () => {
+      const buffer = Buffer.from('nested');
+      mockWebdavClient.getDirectoryContents.mockResolvedValue([
+        {
+          type: 'directory',
+          filename: '/Photos/2024',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          size: 0,
+          etag: null,
+        },
+        {
+          type: 'file',
+          filename: '/Photos/2024/pic.jpg',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          size: 50,
+          etag: null,
+        },
+      ]);
+      mockWebdavClient.getFileContents.mockResolvedValue(buffer);
+
+      await service.mirrorDirectory('/Photos', '/local/Photos');
+
+      expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/2024/pic.jpg', buffer);
     });
   });
 });
