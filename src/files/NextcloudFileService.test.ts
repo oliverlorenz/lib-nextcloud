@@ -458,10 +458,10 @@ describe('NextcloudFileService', () => {
       fsWriteFileSpy = jest.spyOn(nodeFsModule.promises, 'writeFile').mockResolvedValue(undefined);
     });
 
-    it('creates local root directory', async () => {
+    it('creates local directory mirroring the nc path under the local root', async () => {
       mockWebdavClient.getDirectoryContents.mockResolvedValue([]);
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(fsMkdirSpy).toHaveBeenCalledWith('/local/Photos', { recursive: true });
     });
@@ -479,7 +479,7 @@ describe('NextcloudFileService', () => {
       ]);
       mockWebdavClient.getFileContents.mockResolvedValue(buffer);
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(mockWebdavClient.getFileContents).toHaveBeenCalledWith('/Photos/image.jpg');
       expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/image.jpg', buffer);
@@ -498,7 +498,7 @@ describe('NextcloudFileService', () => {
       ]);
       fsStatSpy.mockResolvedValue({ mtimeMs: new Date(remoteLastMod).getTime() + 1000 });
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
       expect(fsWriteFileSpy).not.toHaveBeenCalled();
@@ -519,7 +519,7 @@ describe('NextcloudFileService', () => {
       fsStatSpy.mockResolvedValue({ mtimeMs: new Date('Thu, 01 Jan 2026 00:00:00 GMT').getTime() });
       mockWebdavClient.getFileContents.mockResolvedValue(buffer);
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/image.jpg', buffer);
     });
@@ -535,7 +535,7 @@ describe('NextcloudFileService', () => {
         },
       ]);
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(fsMkdirSpy).toHaveBeenCalledWith('/local/Photos/2024', { recursive: true });
     });
@@ -560,7 +560,7 @@ describe('NextcloudFileService', () => {
       ]);
       mockWebdavClient.getFileContents.mockResolvedValue(buffer);
 
-      await service.mirrorDirectory('/Photos', '/local/Photos');
+      await service.mirrorDirectory('/Photos', '/local');
 
       expect(fsWriteFileSpy).toHaveBeenCalledWith('/local/Photos/2024/pic.jpg', buffer);
     });
