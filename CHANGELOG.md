@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.4...v1.2.0) (2026-05-29)
+
+### Features
+
+* **files:** add mirrorDirectory and appendToFile ([#126](https://github.com/oliverlorenz/lib-nextcloud/issues/126)) ([64e77fe](https://github.com/oliverlorenz/lib-nextcloud/commit/64e77feb011968f8f86010d279790938ac6cfcd1))
+
 ## [1.1.4](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.3...v1.1.4) (2026-05-25)
 
 ### Bug Fixes
