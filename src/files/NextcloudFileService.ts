@@ -188,8 +188,8 @@ export class NextcloudFileService {
     return targetPath;
   }
 
-  public async appendToFile(ncPath: string, line: string, localMirrorRoot?: string): Promise<void> {
-    const localFilePath = localMirrorRoot ? join(localMirrorRoot, ncPath) : undefined;
+  public async appendToFile(ncPath: string, line: string, localNcRoot?: string): Promise<void> {
+    const localFilePath = localNcRoot ? join(localNcRoot, ncPath) : undefined;
     const content = localFilePath
       ? (await fs.readFile(localFilePath)).toString()
       : (await this.download(ncPath)).toString();
@@ -206,7 +206,7 @@ export class NextcloudFileService {
       deep: true,
     })) as FileStat[];
 
-    await fs.mkdir(localPath, { recursive: true });
+    await fs.mkdir(join(localPath, ncPath), { recursive: true });
 
     const sorted = [...entries].sort((a, b) => {
       if (a.type === b.type) return 0;
@@ -215,8 +215,7 @@ export class NextcloudFileService {
 
     for (const entry of sorted) {
       if (entry.filename === ncPath) continue;
-      const relativePath = entry.filename.slice(ncPath.length).replace(/^\//, '');
-      const localEntryPath = join(localPath, relativePath);
+      const localEntryPath = join(localPath, entry.filename);
 
       if (entry.type === 'directory') {
         await fs.mkdir(localEntryPath, { recursive: true });
