@@ -1,6 +1,7 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { AuthType, createClient, FileStat, WebDAVClient } from 'webdav';
-import { basename } from 'path';
+import { basename, join } from 'path';
+import { promises as fs } from 'fs';
 
 const ShareType = {
   PublicLink: 3,
@@ -185,5 +186,55 @@ export class NextcloudFileService {
     }
     await this.upload(targetPath, Buffer.from(documentToUpload));
     return targetPath;
+  }
+
+  public async appendToFile(ncPath: string, line: string, localMirrorRoot?: string): Promise<void> {
+    const localFilePath = localMirrorRoot ? join(localMirrorRoot, ncPath) : undefined;
+    const content = localFilePath
+      ? (await fs.readFile(localFilePath)).toString()
+      : (await this.download(ncPath)).toString();
+    const separator = content.length === 0 || content.endsWith('\n') ? '' : '\n';
+    const updated = Buffer.from(content + separator + line + '\n');
+    if (localFilePath) {
+      await fs.writeFile(localFilePath, updated);
+    }
+    await this.upload(ncPath, updated);
+  }
+
+  public async mirrorDirectory(ncPath: string, localPath: string): Promise<void> {
+    const entries = (await this.getWebDavClient().getDirectoryContents(ncPath, {
+      deep: true,
+    })) as FileStat[];
+
+    await fs.mkdir(localPath, { recursive: true });
+
+    const sorted = [...entries].sort((a, b) => {
+      if (a.type === b.type) return 0;
+      return a.type === 'directory' ? -1 : 1;
+    });
+
+    for (const entry of sorted) {
+      if (entry.filename === ncPath) continue;
+      const relativePath = entry.filename.slice(ncPath.length).replace(/^\//, '');
+      const localEntryPath = join(localPath, relativePath);
+
+      if (entry.type === 'directory') {
+        await fs.mkdir(localEntryPath, { recursive: true });
+      } else {
+        await this.downloadIfOutOfSync(entry, localEntryPath);
+      }
+    }
+  }
+
+  private async downloadIfOutOfSync(entry: FileStat, localFilePath: string): Promise<void> {
+    const remoteLastMod = new Date(entry.lastmod).getTime();
+    try {
+      const stat = await fs.stat(localFilePath);
+      if (stat.mtimeMs >= remoteLastMod) return;
+    } catch {
+      // file does not exist locally
+    }
+    const content = await this.download(entry.filename);
+    await fs.writeFile(localFilePath, content);
   }
 }

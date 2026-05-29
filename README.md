@@ -63,8 +63,10 @@ const files = NextcloudFileService.create('https://nc.example.com', 'user', 'pas
 | `sharePublicly(path, expireDate?)` | Create a public share link |
 | `shareWithUser(path, username, expireDate?)` | Share a file with another Nextcloud user |
 | `addTagByFileId(fileId, tagId)` | Assign a tag to a file by its numeric IDs |
+| `appendToFile(path, line, localMirrorRoot?)` | Append a line and re-upload; if `localMirrorRoot` is given, reads/writes `join(localMirrorRoot, path)` instead of downloading |
 | `createFileFromTemplate(target, template)` | Copy a template file to a new path |
 | `createFileFromTemplateAndReplace(target, template, replacements)` | Copy a template and apply regexp replacements |
+| `mirrorDirectory(ncPath, localPath)` | Recursively mirror a Nextcloud directory to a local path; re-downloads files whose remote `lastmod` is newer than the local copy |
 
 **Examples**
 
