@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.0...v1.2.1) (2026-05-29)
+
+### Bug Fixes
+
+* **files:** align mirrorDirectory and appendToFile path convention ([#128](https://github.com/oliverlorenz/lib-nextcloud/issues/128)) ([6325dcd](https://github.com/oliverlorenz/lib-nextcloud/commit/6325dcd8ca01aa26ca99877f74e033dec52df7b2)), closes [#127](https://github.com/oliverlorenz/lib-nextcloud/issues/127)
+
 ## [1.2.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.1.4...v1.2.0) (2026-05-29)
 
 ### Features
