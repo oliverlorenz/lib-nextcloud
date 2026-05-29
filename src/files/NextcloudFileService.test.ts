@@ -402,9 +402,10 @@ describe('NextcloudFileService', () => {
       );
     });
 
-    describe('with localPath', () => {
+    describe('with localNcRoot', () => {
       let fsReadFileSpy: jest.SpyInstance;
       let fsWriteFileSpy: jest.SpyInstance;
+      let fsMkdirSpy: jest.SpyInstance;
 
       beforeEach(() => {
         fsReadFileSpy = jest
@@ -413,6 +414,9 @@ describe('NextcloudFileService', () => {
         fsWriteFileSpy = jest
           .spyOn(nodeFsModule.promises, 'writeFile')
           .mockResolvedValue(undefined);
+        fsMkdirSpy = jest
+          .spyOn(nodeFsModule.promises, 'mkdir')
+          .mockResolvedValue(undefined as unknown as string);
       });
 
       it('reads from local mirror path instead of downloading', async () => {
@@ -420,6 +424,12 @@ describe('NextcloudFileService', () => {
 
         expect(fsReadFileSpy).toHaveBeenCalledWith('/local/mirror/logs/app.txt');
         expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      });
+
+      it('creates parent directories before writing', async () => {
+        await service.appendToFile('/logs/app.txt', 'new line', '/local/mirror');
+
+        expect(fsMkdirSpy).toHaveBeenCalledWith('/local/mirror/logs', { recursive: true });
       });
 
       it('writes updated content back to local mirror path', async () => {
@@ -437,6 +447,29 @@ describe('NextcloudFileService', () => {
         expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
           '/logs/app.txt',
           Buffer.from('local content\nnew line\n'),
+          {},
+        );
+      });
+
+      it('creates file with just the new line when local file does not exist', async () => {
+        fsReadFileSpy.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+        await service.appendToFile('/logs/app.txt', 'first line', '/local/mirror');
+
+        expect(fsWriteFileSpy).toHaveBeenCalledWith(
+          '/local/mirror/logs/app.txt',
+          Buffer.from('first line\n'),
+        );
+      });
+
+      it('uploads just the new line when local file does not exist', async () => {
+        fsReadFileSpy.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+        await service.appendToFile('/logs/app.txt', 'first line', '/local/mirror');
+
+        expect(mockWebdavClient.putFileContents).toHaveBeenCalledWith(
+          '/logs/app.txt',
+          Buffer.from('first line\n'),
           {},
         );
       });

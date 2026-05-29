@@ -1,6 +1,6 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { AuthType, createClient, FileStat, WebDAVClient } from 'webdav';
-import { basename, join } from 'path';
+import { basename, dirname, join } from 'path';
 import { promises as fs } from 'fs';
 
 const ShareType = {
@@ -190,12 +190,20 @@ export class NextcloudFileService {
 
   public async appendToFile(ncPath: string, line: string, localNcRoot?: string): Promise<void> {
     const localFilePath = localNcRoot ? join(localNcRoot, ncPath) : undefined;
-    const content = localFilePath
-      ? (await fs.readFile(localFilePath)).toString()
-      : (await this.download(ncPath)).toString();
+    let content: string;
+    if (localFilePath) {
+      try {
+        content = (await fs.readFile(localFilePath)).toString();
+      } catch {
+        content = '';
+      }
+    } else {
+      content = (await this.download(ncPath)).toString();
+    }
     const separator = content.length === 0 || content.endsWith('\n') ? '' : '\n';
     const updated = Buffer.from(content + separator + line + '\n');
     if (localFilePath) {
+      await fs.mkdir(dirname(localFilePath), { recursive: true });
       await fs.writeFile(localFilePath, updated);
     }
     await this.upload(ncPath, updated);
