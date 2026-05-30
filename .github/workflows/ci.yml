@@ -16,6 +16,8 @@ jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
       src: ${{ github.event_name == 'push' && 'true' || steps.filter.outputs.src }}
       docs: ${{ github.event_name == 'push' && 'true' || steps.filter.outputs.docs }}
