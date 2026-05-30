@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.3...v1.3.0) (2026-05-30)
+
+### Features
+
+* add deleteFile method to NextcloudFileService ([#142](https://github.com/oliverlorenz/lib-nextcloud/issues/142)) ([2b7e37b](https://github.com/oliverlorenz/lib-nextcloud/commit/2b7e37b1bfeb1b973139fb24fc8f5612c8d8ae9a)), closes [#141](https://github.com/oliverlorenz/lib-nextcloud/issues/141)
+
 ## [1.2.3](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.2...v1.2.3) (2026-05-30)
 
 ### Bug Fixes
