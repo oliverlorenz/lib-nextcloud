@@ -10,7 +10,14 @@ npm run test:watch    # jest watch mode with HTML coverage
 npm run build         # tsc compile → dist/
 npm run lint:eslint   # ESLint (also runs on pre-push)
 npm run lint:prettier # Prettier format check (also runs on pre-push)
-npm run lint:types    # tsc --noEmit + tsc-strict plugin (all 26 files must pass)
+npm run lint:types    # tsc --noEmit + tsc-strict plugin
+npm run lint:knip     # knip — unused exports, files, dependencies
+npm run lint:md       # markdownlint — markdown syntax in all *.md files
+npm run lint:readme   # check README.md has required sections (Installation, Usage)
+npm run lint:links    # check all links in README.md are reachable (local only, not in CI)
+npm run lint:publint  # publint — package.json exports/main/types correctly configured
+npm run lint:attw     # are-the-types-wrong — TypeScript types correctly exported (needs dist/)
+npm run check:all     # run all git hooks locally
 ```
 
 Git hooks: pre-commit runs `test`; pre-push runs `lint:eslint && lint:prettier && test`.
@@ -32,12 +39,14 @@ Releases are fully automated via `semantic-release`. No manual steps required af
 | `refactor: …` / `docs: …` / `chore: …` / `ci: …` / `test: …` / `build: …` | no release | — |
 
 **When writing PR titles:**
+
 - Use imperative, lowercase: `feat: add contact search` not `feat: Added contact search`
 - Scope is optional: `feat(contacts): add search` is fine
 - Breaking change via `!` suffix: `feat!: change constructor signature`
 - For breaking changes, also fill in the "Breaking changes" section of the PR template with migration instructions — this text ends up in the release notes
 
 **Do not:**
+
 - Create `chore(release): …` commits manually — those are written back by `semantic-release`
 - Bump the version in `package.json` manually — `semantic-release` owns the version
 - Edit `CHANGELOG.md` manually — it is auto-generated
@@ -46,7 +55,7 @@ Releases are fully automated via `semantic-release`. No manual steps required af
 
 Each domain lives in its own folder and is self-contained:
 
-```
+```text
 src/
   calendar/      NextcloudCalendarService + index.ts
   contacts/      NextcloudContact (type), NextcloudContactMapper, NextcloudContactService + index.ts
@@ -63,6 +72,7 @@ Every domain folder exposes a barrel `index.ts` that re-exports all public symbo
 ## Naming conventions
 
 All public symbols are prefixed with `Nextcloud`:
+
 - `NextcloudXxxService` — service class
 - `NextcloudXxx` — domain model type (plain TypeScript `type`, never a class)
 - `NextcloudXxxMapper` — maps external data structures to domain model types
@@ -73,6 +83,7 @@ All public symbols are prefixed with `Nextcloud`:
 ### Service
 
 Every service has:
+
 1. A `static create(ncBasePath, ncUsername, ncAppPassword)` factory for standalone use
 2. A constructor that accepts `NextcloudHeaderService` for framework DI (e.g. NestJS)
 3. All methods are `public` with explicit return types
@@ -111,6 +122,7 @@ A class with a single public `mapFoo(raw: ExternalType): NextcloudFoo` method. O
 ### Shared kernel
 
 `NextcloudHeaderService` (in `shared/`) is the only cross-cutting class. It builds the three header variants used across domains:
+
 - `getHeaders()` — Basic Auth only
 - `getJsonResponseHeaders()` — Basic Auth + JSON content/accept
 - `getOCSHeaders()` — JSON headers + `OCS-APIRequest: true` (for OCS REST endpoints)
@@ -130,17 +142,29 @@ Strict mode is fully enabled. The ESLint config adds:
 
 - `@typescript-eslint/explicit-function-return-type: error` — every function needs an explicit return type
 - `@typescript-eslint/explicit-member-accessibility: error` — every class member needs `public`/`private`/`protected` (constructors excluded)
-- `@typescript-eslint/no-non-null-assertion: error` — no `!` operator (disabled in `*.spec.ts`)
+- `@typescript-eslint/no-explicit-any: error` — no `any` types
+- `@typescript-eslint/no-non-null-assertion: error` — no `!` operator (disabled in `*.test.ts`)
 - `@typescript-eslint/no-floating-promises: error` — all promises must be awaited or explicitly handled
 - `@typescript-eslint/no-unused-vars: error` — underscore prefix `_foo` exempts from the rule
+- `@typescript-eslint/consistent-type-imports: error` — type-only imports must use `import type`
+- `@typescript-eslint/strict-boolean-expressions: error` — no implicit boolean coercions
+- `@typescript-eslint/prefer-nullish-coalescing: error` — use `??` instead of `||` for null/undefined fallbacks
+- `@typescript-eslint/no-unnecessary-condition: error` — no always-true or always-false conditions
+- `@typescript-eslint/member-ordering: error` — consistent ordering of class members
+- `@typescript-eslint/require-await: error` — `async` functions must contain at least one `await`
+- `@typescript-eslint/no-misused-promises: error` — no Promises in `forEach` / `if` conditions
+- `@typescript-eslint/switch-exhaustiveness-check: error` — switch over union types must cover all cases
+- `no-only-tests/no-only-tests: error` — no `test.only` or `describe.only` in test files
 - No comments describing what code does — prefer self-documenting names
 
 ## Testing
 
 - Test files colocated with source: `NextcloudFooService.test.ts` next to `NextcloudFooService.ts`
+- Use `jest-mock-extended` (`mock<T>()`) to mock dependencies
 - No mocking of `NextcloudHeaderService` — inject it directly in tests
 - `jest.spyOn(global, 'fetch')` is the standard way to mock HTTP calls
-- Coverage is collected but no thresholds are enforced
+- Coverage threshold: 80% branches, functions, lines, statements
+- No `test.only` or `describe.only` — caught by ESLint
 
 ## Auth
 

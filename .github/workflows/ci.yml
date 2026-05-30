@@ -13,8 +13,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: lint
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ github.event_name == 'push' && 'true' || steps.filter.outputs.src }}
+      docs: ${{ github.event_name == 'push' && 'true' || steps.filter.outputs.docs }}
+      deps: ${{ github.event_name == 'push' && 'true' || steps.filter.outputs.deps }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
+              - 'tsconfig.json'
+              - 'eslint.config.mjs'
+              - 'jest.config.js'
+              - 'knip.json'
+              - '.prettierrc'
+              - 'package.json'
+              - 'package-lock.json'
+            docs:
+              - '*.md'
+              - 'scripts/lint-readme.mjs'
+            deps:
+              - 'package.json'
+              - 'package-lock.json'
+
+  lint-code:
+    name: lint / ${{ matrix.linter }}
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,38 +54,72 @@ jobs:
           - eslint
           - prettier
           - types
+          - knip
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v4.2.2
-
-      - name: Set NodeJS version
-        uses: actions/setup-node@v4.2.0
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - run: npm install
+      - run: npm run lint:${{ matrix.linter }}
 
-      - name: Install dependencies
-        run: npm install
+  lint-docs:
+    name: lint / ${{ matrix.linter }}
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linter:
+          - md
+          - readme
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - run: npm install
+      - run: npm run lint:${{ matrix.linter }}
 
-      - name: Run ${{ matrix.linter }}
-        run: npm run lint:${{ matrix.linter }}
   test:
     name: Test
-    needs: lint
+    needs: [changes, lint-code]
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v4.2.2
-
-      - name: Set NodeJS version
-        uses: actions/setup-node@v4.2.0
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - run: npm install
+      - run: npm test
+      - name: Check package types (attw)
+        run: npm run lint:attw
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run test
-        run: npm test
+  package-quality:
+    name: Package quality
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - run: npm install
+      - run: npm run lint:publint
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip/schema.json",
+  "ignoreDependencies": [
+    "conventional-changelog-conventionalcommits",
+    "eslint-config-prettier",
+    "jest-mock-extended"
+  ],
+  "rules": {
+    "enumMembers": "off"
+  }
+}
