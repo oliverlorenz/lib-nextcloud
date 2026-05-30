@@ -157,6 +157,10 @@ export class NextcloudFileService {
     return this.getWebDavClient().moveFile(sourcePath, targetPath);
   }
 
+  public async deleteFile(ncPath: string): Promise<void> {
+    await this.getWebDavClient().deleteFile(ncPath);
+  }
+
   public async createFileFromTemplate(targetPath: string, templatePath: string): Promise<string> {
     await this.upload(targetPath, await this.download(templatePath));
     return targetPath;

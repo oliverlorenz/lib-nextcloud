@@ -18,6 +18,7 @@ describe('NextcloudFileService', () => {
     getDirectoryContents: jest.Mock;
     createDirectory: jest.Mock;
     moveFile: jest.Mock;
+    deleteFile: jest.Mock;
   };
 
   beforeEach(() => {
@@ -28,6 +29,7 @@ describe('NextcloudFileService', () => {
       getDirectoryContents: jest.fn().mockResolvedValue([]),
       createDirectory: jest.fn().mockResolvedValue(undefined),
       moveFile: jest.fn().mockResolvedValue(undefined),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
     };
     (createClient as jest.Mock).mockReturnValue(mockWebdavClient);
     service = new NextcloudFileService(
@@ -324,6 +326,20 @@ describe('NextcloudFileService', () => {
       await service.moveFile('/old.txt', '/new.txt');
 
       expect(mockWebdavClient.moveFile).toHaveBeenCalledWith('/old.txt', '/new.txt');
+    });
+  });
+
+  describe('deleteFile', () => {
+    it('calls WebDAV deleteFile with the given path', async () => {
+      await service.deleteFile('/docs/note.md');
+
+      expect(mockWebdavClient.deleteFile).toHaveBeenCalledWith('/docs/note.md');
+    });
+
+    it('throws when WebDAV deleteFile rejects', async () => {
+      mockWebdavClient.deleteFile.mockRejectedValue(new Error('404 Not Found'));
+
+      await expect(service.deleteFile('/docs/missing.md')).rejects.toThrow('404 Not Found');
     });
   });
 
