@@ -1,14 +1,14 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
-import { AuthType, createClient, FileStat, WebDAVClient } from 'webdav';
+import { AuthType, createClient, type FileStat, type WebDAVClient } from 'webdav';
 import { basename, dirname, join } from 'path';
 import { promises as fs } from 'fs';
 
-const ShareType = {
+const SHARE_TYPE = {
   PublicLink: 3,
   User: 0,
 } as const;
 
-const SharePermissions = {
+const SHARE_PERMISSIONS = {
   ReadWrite: 3,
   ReadOnly: 1,
 } as const;
@@ -36,27 +36,15 @@ export class NextcloudFileService {
 
   private webdav: WebDAVClient | undefined;
 
-  private getWebDavClient(): WebDAVClient {
-    if (!this.webdav) {
-      this.webdav = createClient(`${this.ncBasePath}/remote.php/webdav/`, {
-        authType: AuthType.Password,
-        username: this.ncUsername,
-        password: this.ncAppPassword,
-        maxBodyLength: Infinity,
-      });
-    }
-    return this.webdav;
-  }
-
   public async sharePublicly(ncFilePath: string, expireDate?: Date): Promise<string> {
     const raw = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`, {
       method: 'POST',
       headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
       body: JSON.stringify({
         path: ncFilePath,
-        permissions: SharePermissions.ReadWrite,
-        expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
-        shareType: ShareType.PublicLink,
+        permissions: SHARE_PERMISSIONS.ReadWrite,
+        expireDate: expireDate !== undefined ? expireDate.toISOString().slice(0, 10) : undefined,
+        shareType: SHARE_TYPE.PublicLink,
       }),
     });
     if (!raw.ok) {
@@ -76,9 +64,9 @@ export class NextcloudFileService {
       headers: this.nextcloudCommonService.getOCSHeaders(this.ncUsername, this.ncAppPassword),
       body: JSON.stringify({
         path: ncFilePath,
-        permissions: SharePermissions.ReadOnly,
-        expireDate: expireDate ? expireDate.toISOString().slice(0, 10) : undefined,
-        shareType: ShareType.User,
+        permissions: SHARE_PERMISSIONS.ReadOnly,
+        expireDate: expireDate !== undefined ? expireDate.toISOString().slice(0, 10) : undefined,
+        shareType: SHARE_TYPE.User,
         shareWith: shareWithUsername,
       }),
     });
@@ -128,8 +116,8 @@ export class NextcloudFileService {
     return Promise.all(list.map((value) => this.upload(`${path}/${value.fileName}`, value.buffer)));
   }
 
-  public async download(filePath: string): Promise<Buffer> {
-    return this.getWebDavClient().getFileContents(filePath) as unknown as Buffer;
+  public download(filePath: string): Promise<Buffer> {
+    return this.getWebDavClient().getFileContents(filePath) as unknown as Promise<Buffer>;
   }
 
   public stream(filePath: string): NodeJS.ReadableStream {
@@ -189,9 +177,9 @@ export class NextcloudFileService {
   }
 
   public async appendToFile(ncPath: string, line: string, localNcRoot?: string): Promise<void> {
-    const localFilePath = localNcRoot ? join(localNcRoot, ncPath) : undefined;
+    const localFilePath = localNcRoot !== undefined ? join(localNcRoot, ncPath) : undefined;
     let content: string;
-    if (localFilePath) {
+    if (localFilePath !== undefined) {
       try {
         content = (await fs.readFile(localFilePath)).toString();
       } catch {
@@ -202,7 +190,7 @@ export class NextcloudFileService {
     }
     const separator = content.length === 0 || content.endsWith('\n') ? '' : '\n';
     const updated = Buffer.from(content + separator + line + '\n');
-    if (localFilePath) {
+    if (localFilePath !== undefined) {
       await fs.mkdir(dirname(localFilePath), { recursive: true });
       await fs.writeFile(localFilePath, updated);
     }
@@ -231,6 +219,16 @@ export class NextcloudFileService {
         await this.downloadIfOutOfSync(entry, localEntryPath);
       }
     }
+  }
+
+  private getWebDavClient(): WebDAVClient {
+    this.webdav ??= createClient(`${this.ncBasePath}/remote.php/webdav/`, {
+      authType: AuthType.Password,
+      username: this.ncUsername,
+      password: this.ncAppPassword,
+      maxBodyLength: Infinity,
+    });
+    return this.webdav;
   }
 
   private async downloadIfOutOfSync(entry: FileStat, localFilePath: string): Promise<void> {

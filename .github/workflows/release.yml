@@ -28,11 +28,14 @@ jobs:
           fetch-depth: 0
 
       - name: Set NodeJS version
-        uses: actions/setup-node@v4.2.0
+        uses: actions/setup-node@v4.4.0
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://npm.pkg.github.com'
           cache: 'npm'
+
+      - name: Configure npm to use GitHub Package Registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
 
       - name: Install dependencies
         run: npm install

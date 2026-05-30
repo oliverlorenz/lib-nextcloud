@@ -1,6 +1,6 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 
-const IcalExpander = require('ical-expander');
+const icalExpander = require('ical-expander');
 
 export class NextcloudCalendarService {
   public static create(
@@ -35,7 +35,7 @@ export class NextcloudCalendarService {
       },
     );
     const ics = await response.text();
-    const icalExpander = new IcalExpander({ ics, maxIterations: 100 });
+    const expander = new icalExpander({ ics, maxIterations: 100 });
 
     let events: {
       events: { startDate: Date; summary: string }[];
@@ -43,9 +43,9 @@ export class NextcloudCalendarService {
     };
 
     if (!start && !end) {
-      events = icalExpander.all();
+      events = expander.all();
     } else {
-      events = icalExpander.between(start, end);
+      events = expander.between(start, end);
     }
 
     const mappedEvents = events.events.map((event) => ({

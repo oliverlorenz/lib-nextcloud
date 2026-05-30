@@ -9,14 +9,18 @@ export class NextcloudContactMapper {
     const year = rawBirthday?.slice(0, -4) !== '--' ? rawBirthday?.slice(0, -4) : '0001';
     return {
       uid: card.UID?.value ?? '',
-      lastName: card.N?.value.familyNames[0] || '',
-      firstName: card.N?.value.givenNames[0] || '',
+      lastName: card.N?.value.familyNames[0] ?? '',
+      firstName: card.N?.value.givenNames[0] ?? '',
       address: card.ADR?.[0]?.value.streetAddress?.[0] ?? '',
       postalCode: card.ADR?.[0]?.value.postalCode?.[0] ?? '',
       city: card.ADR?.[0]?.value.locality?.[0] ?? '',
-      email: card.EMAIL ? card.EMAIL.map((email) => email.value) : [],
-      phoneNumber: card.TEL?.map((tel) => tel.value) || [],
-      birthday: rawBirthday ? new Date(Number(year), Number(month) - 1, Number(day)) : undefined,
+      email: card.EMAIL !== undefined ? card.EMAIL.map((email) => email.value) : [],
+      phoneNumber: card.TEL?.map((tel) => tel.value) ?? [],
+      birthday:
+        rawBirthday !== undefined
+          ? new Date(Number(year), Number(month) - 1, Number(day))
+          : undefined,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       username: card.x?.X_SOCIALPROFILE?.[0]?.value,
       photo: card.PHOTO?.[0]?.value ?? undefined,
       organization: card.ORG?.[0]?.value[0] ?? undefined,
