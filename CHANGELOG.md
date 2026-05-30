@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.2...v1.2.3) (2026-05-30)
+
+### Bug Fixes
+
+* **files:** appendToFile creates missing file and parent directories ([#131](https://github.com/oliverlorenz/lib-nextcloud/issues/131)) ([df255c7](https://github.com/oliverlorenz/lib-nextcloud/commit/df255c7e2b54619eb9bd43652626a58b165e9774))
+
 ## [1.2.2](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.1...v1.2.2) (2026-05-29)
 
 ### Bug Fixes
