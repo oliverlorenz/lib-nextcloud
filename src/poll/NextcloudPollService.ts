@@ -1,9 +1,5 @@
-import {
-  NextcloudPollAccess,
-  NextcloudPollConfiguration,
-  NextcloudPollShowResults,
-  NextcloudPollType,
-} from './NextcloudPollTypes';
+import type { NextcloudPollConfiguration } from './NextcloudPollTypes';
+import { NextcloudPollType } from './NextcloudPollTypes';
 
 export class NextcloudPollService {
   public static create(
@@ -20,14 +16,6 @@ export class NextcloudPollService {
     private ncAppPassword: string,
   ) {}
 
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json;charset=utf-8',
-      Authorization: `Basic ${btoa(`${this.ncUsername}:${this.ncAppPassword}`)}`,
-      accept: 'application/json',
-    };
-  }
-
   public async createTextPoll(
     title: string,
     options: string[],
@@ -39,8 +27,8 @@ export class NextcloudPollService {
       body: JSON.stringify({
         title,
         type: NextcloudPollType.TEXT,
-        access: config.access || NextcloudPollAccess.OPEN,
-        showResults: config.showResults || NextcloudPollShowResults.ALWAYS,
+        access: config.access,
+        showResults: config.showResults,
         expiresAt: config.expire,
       }),
     });
@@ -99,5 +87,13 @@ export class NextcloudPollService {
     }
     const sharesResponse = await sharesRaw.json();
     return sharesResponse.shares[0].URL;
+  }
+
+  private getHeaders(): HeadersInit {
+    return {
+      'Content-Type': 'application/json;charset=utf-8',
+      Authorization: `Basic ${btoa(`${this.ncUsername}:${this.ncAppPassword}`)}`,
+      accept: 'application/json',
+    };
   }
 }

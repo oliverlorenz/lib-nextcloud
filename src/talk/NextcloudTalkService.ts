@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-const TalkShareType = {
+const TALK_SHARE_TYPE = {
   Room: 10,
 } as const;
 
@@ -18,15 +18,6 @@ export class NextcloudTalkService {
     private ncUsername: string,
     private ncAppPassword: string,
   ) {}
-
-  private getHeaders(): Headers {
-    const headers = new Headers();
-    headers.append('OCS-APIRequest', 'true');
-    headers.append('Content-Type', 'application/json');
-    headers.append('Accept', 'application/json');
-    headers.append('Authorization', `Basic ${btoa(`${this.ncUsername}:${this.ncAppPassword}`)}`);
-    return headers;
-  }
 
   public async sendTextMessage(channelId: string, message: string): Promise<string> {
     const referenceId = randomUUID().toString();
@@ -49,7 +40,7 @@ export class NextcloudTalkService {
     const response = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/files_sharing/api/v1/shares`, {
       method: 'POST',
       body: JSON.stringify({
-        shareType: TalkShareType.Room,
+        shareType: TALK_SHARE_TYPE.Room,
         path: ncFilePath,
         shareWith: channelId,
       }),
@@ -78,5 +69,14 @@ export class NextcloudTalkService {
     if (!response.ok) {
       throw new Error(`Failed to send poll: ${response.statusText}, ${await response.json()}`);
     }
+  }
+
+  private getHeaders(): Headers {
+    const headers = new Headers();
+    headers.append('OCS-APIRequest', 'true');
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
+    headers.append('Authorization', `Basic ${btoa(`${this.ncUsername}:${this.ncAppPassword}`)}`);
+    return headers;
   }
 }
