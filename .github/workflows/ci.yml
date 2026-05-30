@@ -123,6 +123,7 @@ jobs:
       - name: Configure npm to use GitHub Package Registry
         run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
       - run: npm install
+      - run: npm run build
       - run: npm run lint:publint
       - name: Audit dependencies
         run: npm audit --audit-level=high
