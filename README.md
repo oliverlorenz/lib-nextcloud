@@ -41,6 +41,61 @@ For dependency injection in frameworks like NestJS, you can also use the constru
 
 ## Services
 
+### FileMirrorService
+
+Continuously mirrors a remote Nextcloud folder to a local directory. Uses the `notify_push` WebSocket for near-instant updates, with automatic fallback to periodic polling when `notify_push` is unavailable.
+
+```ts
+import { NextcloudFileMirrorService } from '@oliverlorenz/lib-nextcloud';
+
+const mirror = NextcloudFileMirrorService.create('https://nc.example.com', 'user', 'pass');
+
+await mirror.start({
+  remotePath: '/Documents/MyFolder',
+  localPath: '/local/mirror',
+  onEvent: (e) => console.log(e.type, e.remotePath),
+});
+
+// Stop later:
+mirror.stop();
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `remotePath` | `string` | — | Nextcloud folder to mirror (WebDAV path) |
+| `localPath` | `string` | — | Local directory to mirror into |
+| `pollIntervalMs` | `number` | `30_000` | Fallback poll interval when `notify_push` is unavailable |
+| `onConflict` | `(remotePath, localPath) => 'remote' \| 'local'` | `undefined` | Called when the local file is newer than the remote; remote wins when omitted |
+| `onEvent` | `(event: NextcloudMirrorEvent) => void` | `undefined` | Fired after each file is synced or deleted locally |
+
+**`NextcloudMirrorEvent`**
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | `'synced' \| 'deleted'` | Whether the file was downloaded or removed locally |
+| `remotePath` | `string` | Full WebDAV path of the file |
+| `localPath` | `string` | Absolute local path of the file |
+
+**Examples**
+
+```ts
+// Mirror with conflict callback (keep local changes if newer)
+await mirror.start({
+  remotePath: '/Documents/MyFolder',
+  localPath: '/local/mirror',
+  onConflict: (_remotePath, _localPath) => 'local',
+});
+
+// Custom poll interval for slower networks
+await mirror.start({
+  remotePath: '/Photos',
+  localPath: '/local/photos',
+  pollIntervalMs: 60_000,
+});
+```
+
+---
+
 ### FileService
 
 ```ts
