@@ -1,7 +1,12 @@
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { AuthType, createClient, type FileStat, type WebDAVClient } from 'webdav';
-import { basename, dirname, join } from 'path';
-import { promises as fs } from 'fs';
+import { basename } from 'path';
+
+export type DirectoryEntry = {
+  filename: string;
+  type: 'file' | 'directory';
+  lastmod: string;
+};
 
 const SHARE_TYPE = {
   PublicLink: 3,
@@ -161,6 +166,16 @@ export class NextcloudFileService {
     await this.getWebDavClient().deleteFile(ncPath);
   }
 
+  public async listDirectoryContents(
+    ncPath: string,
+    options: { deep?: boolean } = {},
+  ): Promise<DirectoryEntry[]> {
+    const entries = (await this.getWebDavClient().getDirectoryContents(ncPath, {
+      deep: options.deep ?? false,
+    })) as FileStat[];
+    return entries.map((e) => ({ filename: e.filename, type: e.type, lastmod: e.lastmod }));
+  }
+
   public async createFileFromTemplate(targetPath: string, templatePath: string): Promise<string> {
     await this.upload(targetPath, await this.download(templatePath));
     return targetPath;
@@ -180,49 +195,16 @@ export class NextcloudFileService {
     return targetPath;
   }
 
-  public async appendToFile(ncPath: string, line: string, localNcRoot?: string): Promise<void> {
-    const localFilePath = localNcRoot !== undefined ? join(localNcRoot, ncPath) : undefined;
+  public async appendToFile(ncPath: string, line: string): Promise<void> {
     let content: string;
-    if (localFilePath !== undefined) {
-      try {
-        content = (await fs.readFile(localFilePath)).toString();
-      } catch {
-        content = '';
-      }
-    } else {
+    try {
       content = (await this.download(ncPath)).toString();
+    } catch {
+      content = '';
     }
     const separator = content.length === 0 || content.endsWith('\n') ? '' : '\n';
     const updated = Buffer.from(content + separator + line + '\n');
-    if (localFilePath !== undefined) {
-      await fs.mkdir(dirname(localFilePath), { recursive: true });
-      await fs.writeFile(localFilePath, updated);
-    }
     await this.upload(ncPath, updated);
-  }
-
-  public async mirrorDirectory(ncPath: string, localPath: string): Promise<void> {
-    const entries = (await this.getWebDavClient().getDirectoryContents(ncPath, {
-      deep: true,
-    })) as FileStat[];
-
-    await fs.mkdir(join(localPath, ncPath), { recursive: true });
-
-    const sorted = [...entries].sort((a, b) => {
-      if (a.type === b.type) return 0;
-      return a.type === 'directory' ? -1 : 1;
-    });
-
-    for (const entry of sorted) {
-      if (entry.filename === ncPath) continue;
-      const localEntryPath = join(localPath, entry.filename);
-
-      if (entry.type === 'directory') {
-        await fs.mkdir(localEntryPath, { recursive: true });
-      } else {
-        await this.downloadIfOutOfSync(entry, localEntryPath);
-      }
-    }
   }
 
   private getWebDavClient(): WebDAVClient {
@@ -233,17 +215,5 @@ export class NextcloudFileService {
       maxBodyLength: Infinity,
     });
     return this.webdav;
-  }
-
-  private async downloadIfOutOfSync(entry: FileStat, localFilePath: string): Promise<void> {
-    const remoteLastMod = new Date(entry.lastmod).getTime();
-    try {
-      const stat = await fs.stat(localFilePath);
-      if (stat.mtimeMs >= remoteLastMod) return;
-    } catch {
-      // file does not exist locally
-    }
-    const content = await this.download(entry.filename);
-    await fs.writeFile(localFilePath, content);
   }
 }
