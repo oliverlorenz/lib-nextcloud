@@ -1,3 +1,13 @@
+## [2.0.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.3.0...v2.0.0) (2026-05-31)
+
+### ⚠ BREAKING CHANGES
+
+* add listDirectoryContents, remove mirrorDirectory and localNcRoot from appendToFile (#144)
+
+### Features
+
+* add listDirectoryContents, remove mirrorDirectory and localNcRoot from appendToFile ([#144](https://github.com/oliverlorenz/lib-nextcloud/issues/144)) ([5ff8b5a](https://github.com/oliverlorenz/lib-nextcloud/commit/5ff8b5a3651cdf924d7b9336e37c1c774bb9c059)), closes [#143](https://github.com/oliverlorenz/lib-nextcloud/issues/143)
+
 ## [1.3.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.2.3...v1.3.0) (2026-05-30)
 
 ### Features
