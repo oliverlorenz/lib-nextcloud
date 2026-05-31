@@ -1,3 +1,9 @@
+## [2.1.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v2.0.0...v2.1.0) (2026-05-31)
+
+### Features
+
+* add NextcloudFileMirrorService for continuous folder mirroring ([#146](https://github.com/oliverlorenz/lib-nextcloud/issues/146)) ([a043449](https://github.com/oliverlorenz/lib-nextcloud/commit/a043449b4c9171b6da2c70639e6358157f9bb640)), closes [#145](https://github.com/oliverlorenz/lib-nextcloud/issues/145)
+
 ## [2.0.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v1.3.0...v2.0.0) (2026-05-31)
 
 ### ⚠ BREAKING CHANGES
