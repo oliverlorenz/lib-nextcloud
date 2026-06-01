@@ -452,8 +452,18 @@ describe('NextcloudFileService', () => {
       const result = await service.listDirectoryContents('/Photos');
 
       expect(result).toEqual([
-        { filename: '/Photos/image.jpg', type: 'file', lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT' },
-        { filename: '/Photos/sub', type: 'directory', lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT' },
+        {
+          filename: '/Photos/image.jpg',
+          type: 'file',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          etag: null,
+        },
+        {
+          filename: '/Photos/sub',
+          type: 'directory',
+          lastmod: 'Thu, 01 Jan 2026 00:00:00 GMT',
+          etag: null,
+        },
       ]);
     });
 

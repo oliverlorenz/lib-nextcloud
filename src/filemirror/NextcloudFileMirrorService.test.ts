@@ -1,8 +1,9 @@
 import { mkdir, stat, unlink, writeFile } from 'fs/promises';
+import { mock } from 'jest-mock-extended';
+import { NextcloudFileService } from '../files';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { NextcloudFileMirrorService } from './NextcloudFileMirrorService';
 import type { NextcloudFileMirrorOptions, NextcloudMirrorEvent } from './NextcloudFileMirrorTypes';
-import { createClient } from 'webdav';
 
 jest.mock('webdav', () => ({
   AuthType: { Password: 'password' },
@@ -55,10 +56,7 @@ class MockWebSocket {
 describe('NextcloudFileMirrorService', () => {
   let service: NextcloudFileMirrorService;
   let fetchSpy: jest.SpyInstance;
-  let mockWebdavClient: {
-    getDirectoryContents: jest.Mock;
-    getFileContents: jest.Mock;
-  };
+  let mockFileService: ReturnType<typeof mock<NextcloudFileService>>;
   let mockWs: MockWebSocket;
   let wsFactory: jest.Mock;
 
@@ -67,17 +65,15 @@ describe('NextcloudFileMirrorService', () => {
     localPath: '/local/mirror',
   };
 
-  const makeFileStat = (
+  const makeEntry = (
     filename: string,
-    etag: string,
+    etag: string | null,
     lastmod = 'Thu, 01 Jan 2026 00:00:00 GMT',
   ) => ({
     filename,
     type: 'file' as const,
     etag,
     lastmod,
-    basename: filename.split('/').pop() ?? '',
-    size: 100,
   });
 
   beforeEach(() => {
@@ -88,11 +84,11 @@ describe('NextcloudFileMirrorService', () => {
     (unlink as jest.Mock).mockResolvedValue(undefined);
     (stat as jest.Mock).mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
 
-    mockWebdavClient = {
-      getDirectoryContents: jest.fn().mockResolvedValue([]),
-      getFileContents: jest.fn().mockResolvedValue(Buffer.from('content')),
-    };
-    (createClient as jest.Mock).mockReturnValue(mockWebdavClient);
+    mockFileService = mock<NextcloudFileService>();
+    mockFileService.listDirectoryContents.mockResolvedValue([]);
+    mockFileService.download.mockResolvedValue(Buffer.from('content'));
+    mockFileService.upload.mockResolvedValue(true);
+    mockFileService.deleteFile.mockResolvedValue(undefined);
 
     mockWs = new MockWebSocket('ws://test');
     wsFactory = jest.fn().mockReturnValue(mockWs);
@@ -107,6 +103,7 @@ describe('NextcloudFileMirrorService', () => {
       'user',
       'pass',
       new NextcloudHeaderService(),
+      mockFileService,
       wsFactory,
     );
   });
@@ -127,7 +124,7 @@ describe('NextcloudFileMirrorService', () => {
     it('performs initial sync on start', async () => {
       await service.start(BASE_OPTIONS);
 
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalledWith(BASE_OPTIONS.remotePath, {
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalledWith(BASE_OPTIONS.remotePath, {
         deep: true,
       });
     });
@@ -155,19 +152,19 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('downloads new files during initial sync', async () => {
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([
-        makeFileStat('/Documents/Folder/file.txt', 'etag-1'),
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1'),
       ]);
 
       await service.start(BASE_OPTIONS);
 
-      expect(mockWebdavClient.getFileContents).toHaveBeenCalledWith('/Documents/Folder/file.txt');
+      expect(mockFileService.download).toHaveBeenCalledWith('/Documents/Folder/file.txt');
       expect(writeFile).toHaveBeenCalledWith('/local/mirror/file.txt', expect.any(Buffer));
     });
 
     it('fires onEvent with synced type after downloading a file', async () => {
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([
-        makeFileStat('/Documents/Folder/file.txt', 'etag-1'),
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1'),
       ]);
       const events: NextcloudMirrorEvent[] = [];
 
@@ -191,7 +188,7 @@ describe('NextcloudFileMirrorService', () => {
       jest.advanceTimersByTime(30_000);
       await Promise.resolve();
 
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalledTimes(2);
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
     });
 
     it('uses custom pollIntervalMs for fallback polling', async () => {
@@ -202,11 +199,11 @@ describe('NextcloudFileMirrorService', () => {
 
       jest.advanceTimersByTime(4_999);
       await Promise.resolve();
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalledTimes(1);
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(1);
 
       jest.advanceTimersByTime(1);
       await Promise.resolve();
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalledTimes(2);
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -225,32 +222,32 @@ describe('NextcloudFileMirrorService', () => {
       await service.start(BASE_OPTIONS);
 
       service.stop();
-      mockWebdavClient.getDirectoryContents.mockClear();
+      mockFileService.listDirectoryContents.mockClear();
       jest.advanceTimersByTime(60_000);
 
-      expect(mockWebdavClient.getDirectoryContents).not.toHaveBeenCalled();
+      expect(mockFileService.listDirectoryContents).not.toHaveBeenCalled();
     });
   });
 
   describe('notify_file event', () => {
     it('triggers a new sync when notify_file message is received', async () => {
       await service.start(BASE_OPTIONS);
-      mockWebdavClient.getDirectoryContents.mockClear();
+      mockFileService.listDirectoryContents.mockClear();
 
       mockWs.emit('message', { data: 'notify_file' });
       await flush();
 
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalled();
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalled();
     });
 
     it('ignores non-string message data', async () => {
       await service.start(BASE_OPTIONS);
-      mockWebdavClient.getDirectoryContents.mockClear();
+      mockFileService.listDirectoryContents.mockClear();
 
       mockWs.emit('message', { data: 42 });
       await flush();
 
-      expect(mockWebdavClient.getDirectoryContents).not.toHaveBeenCalled();
+      expect(mockFileService.listDirectoryContents).not.toHaveBeenCalled();
     });
 
     it('resets reconnect delay on authenticated message', async () => {
@@ -296,52 +293,53 @@ describe('NextcloudFileMirrorService', () => {
 
   describe('ETag-based delta sync', () => {
     it('skips files whose ETag has not changed since last sync', async () => {
-      const file = makeFileStat('/Documents/Folder/file.txt', 'etag-stable');
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-stable'),
+      ]);
 
       await service.start(BASE_OPTIONS);
-      mockWebdavClient.getFileContents.mockClear();
+      mockFileService.download.mockClear();
 
       mockWs.emit('message', { data: 'notify_file' });
       await flush();
 
-      expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      expect(mockFileService.download).not.toHaveBeenCalled();
     });
 
     it('re-downloads files whose ETag changed', async () => {
-      const fileV1 = makeFileStat('/Documents/Folder/file.txt', 'etag-v1');
-      const fileV2 = makeFileStat('/Documents/Folder/file.txt', 'etag-v2');
-      mockWebdavClient.getDirectoryContents
-        .mockResolvedValueOnce([fileV1])
-        .mockResolvedValueOnce([fileV2]);
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-v1')])
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-v2')]);
 
       await service.start(BASE_OPTIONS);
-      mockWebdavClient.getFileContents.mockClear();
+      mockFileService.download.mockClear();
 
       mockWs.emit('message', { data: 'notify_file' });
       await flush();
 
-      expect(mockWebdavClient.getFileContents).toHaveBeenCalledWith('/Documents/Folder/file.txt');
+      expect(mockFileService.download).toHaveBeenCalledWith('/Documents/Folder/file.txt');
     });
 
     it('uses lastmod as fallback when etag is null', async () => {
-      const file = { ...makeFileStat('/Documents/Folder/file.txt', ''), etag: null };
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', null),
+      ]);
 
       await service.start(BASE_OPTIONS);
-      mockWebdavClient.getFileContents.mockClear();
+      mockFileService.download.mockClear();
 
       mockWs.emit('message', { data: 'notify_file' });
       await flush();
 
-      expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      expect(mockFileService.download).not.toHaveBeenCalled();
     });
   });
 
   describe('deletion mirroring', () => {
     it('deletes local file when remote file is removed', async () => {
-      const file = makeFileStat('/Documents/Folder/file.txt', 'etag-1');
-      mockWebdavClient.getDirectoryContents.mockResolvedValueOnce([file]).mockResolvedValueOnce([]);
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
+        .mockResolvedValueOnce([]);
       (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
 
       await service.start(BASE_OPTIONS);
@@ -353,8 +351,9 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('fires onEvent with deleted type when local file is removed', async () => {
-      const file = makeFileStat('/Documents/Folder/file.txt', 'etag-1');
-      mockWebdavClient.getDirectoryContents.mockResolvedValueOnce([file]).mockResolvedValueOnce([]);
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
+        .mockResolvedValueOnce([]);
       (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
       const events: NextcloudMirrorEvent[] = [];
 
@@ -371,8 +370,9 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('skips deletion when local file does not exist', async () => {
-      const file = makeFileStat('/Documents/Folder/file.txt', 'etag-1');
-      mockWebdavClient.getDirectoryContents.mockResolvedValueOnce([file]).mockResolvedValueOnce([]);
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
+        .mockResolvedValueOnce([]);
 
       await service.start(BASE_OPTIONS);
 
@@ -386,23 +386,21 @@ describe('NextcloudFileMirrorService', () => {
   describe('conflict resolution', () => {
     it('downloads file without calling onConflict when no local file exists', async () => {
       const onConflict = jest.fn();
-      const file = makeFileStat('/Documents/Folder/file.txt', 'etag-1');
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1'),
+      ]);
 
       await service.start({ ...BASE_OPTIONS, onConflict });
 
       expect(onConflict).not.toHaveBeenCalled();
-      expect(mockWebdavClient.getFileContents).toHaveBeenCalled();
+      expect(mockFileService.download).toHaveBeenCalled();
     });
 
     it('downloads without calling onConflict when local file is not newer', async () => {
       const onConflict = jest.fn();
-      const file = makeFileStat(
-        '/Documents/Folder/file.txt',
-        'etag-1',
-        'Thu, 01 Jan 2026 12:00:00 GMT',
-      );
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 12:00:00 GMT'),
+      ]);
       (stat as jest.Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T11:00:00Z').getTime(),
       });
@@ -410,17 +408,14 @@ describe('NextcloudFileMirrorService', () => {
       await service.start({ ...BASE_OPTIONS, onConflict });
 
       expect(onConflict).not.toHaveBeenCalled();
-      expect(mockWebdavClient.getFileContents).toHaveBeenCalled();
+      expect(mockFileService.download).toHaveBeenCalled();
     });
 
     it('calls onConflict when local file is newer than remote', async () => {
       const onConflict = jest.fn().mockReturnValue('remote');
-      const file = makeFileStat(
-        '/Documents/Folder/file.txt',
-        'etag-1',
-        'Thu, 01 Jan 2026 10:00:00 GMT',
-      );
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
+      ]);
       (stat as jest.Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
@@ -435,43 +430,37 @@ describe('NextcloudFileMirrorService', () => {
 
     it('skips download when onConflict returns local', async () => {
       const onConflict = jest.fn().mockReturnValue('local');
-      const file = makeFileStat(
-        '/Documents/Folder/file.txt',
-        'etag-1',
-        'Thu, 01 Jan 2026 10:00:00 GMT',
-      );
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
+      ]);
       (stat as jest.Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
 
       await service.start({ ...BASE_OPTIONS, onConflict });
 
-      expect(mockWebdavClient.getFileContents).not.toHaveBeenCalled();
+      expect(mockFileService.download).not.toHaveBeenCalled();
       expect(writeFile).not.toHaveBeenCalled();
     });
 
     it('downloads file when no onConflict is set even if local is newer', async () => {
-      const file = makeFileStat(
-        '/Documents/Folder/file.txt',
-        'etag-1',
-        'Thu, 01 Jan 2026 10:00:00 GMT',
-      );
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([file]);
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
+      ]);
       (stat as jest.Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
 
       await service.start(BASE_OPTIONS);
 
-      expect(mockWebdavClient.getFileContents).toHaveBeenCalled();
+      expect(mockFileService.download).toHaveBeenCalled();
     });
   });
 
   describe('path mapping', () => {
     it('maps nested remote paths to correct local paths', async () => {
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([
-        makeFileStat('/Documents/Folder/sub/deep/file.txt', 'etag-1'),
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/sub/deep/file.txt', 'etag-1'),
       ]);
 
       await service.start(BASE_OPTIONS);
@@ -480,8 +469,8 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('creates parent directories for nested files', async () => {
-      mockWebdavClient.getDirectoryContents.mockResolvedValue([
-        makeFileStat('/Documents/Folder/sub/file.txt', 'etag-1'),
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/sub/file.txt', 'etag-1'),
       ]);
 
       await service.start(BASE_OPTIONS);
@@ -502,7 +491,141 @@ describe('NextcloudFileMirrorService', () => {
       jest.advanceTimersByTime(30_000);
       await Promise.resolve();
 
-      expect(mockWebdavClient.getDirectoryContents).toHaveBeenCalledTimes(2);
+      expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('writeFile()', () => {
+    it('throws when service is not started', async () => {
+      await expect(service.writeFile('/local/mirror/file.txt', 'content')).rejects.toThrow(
+        'Service not started',
+      );
+    });
+
+    it('writes the file to the local path', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/file.txt', Buffer.from('hello'));
+
+      expect(writeFile).toHaveBeenCalledWith('/local/mirror/file.txt', expect.any(Buffer));
+    });
+
+    it('converts string contents to Buffer before writing locally', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/file.txt', 'hello');
+
+      expect(writeFile).toHaveBeenCalledWith('/local/mirror/file.txt', Buffer.from('hello'));
+    });
+
+    it('creates parent directories before writing', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/sub/file.txt', 'hello');
+
+      expect(mkdir).toHaveBeenCalledWith('/local/mirror/sub', { recursive: true });
+    });
+
+    it('uploads file contents to the corresponding WebDAV path', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/file.txt', Buffer.from('hello'));
+
+      expect(mockFileService.upload).toHaveBeenCalledWith(
+        '/Documents/Folder/file.txt',
+        expect.any(Buffer),
+      );
+    });
+
+    it('maps nested local paths to correct remote paths', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/sub/deep/file.txt', 'hello');
+
+      expect(mockFileService.upload).toHaveBeenCalledWith(
+        '/Documents/Folder/sub/deep/file.txt',
+        expect.any(Buffer),
+      );
+    });
+
+    it('fires onEvent with uploaded type after uploading', async () => {
+      const events: NextcloudMirrorEvent[] = [];
+      await service.start({ ...BASE_OPTIONS, onEvent: (e) => events.push(e) });
+
+      await service.writeFile('/local/mirror/file.txt', 'hello');
+
+      expect(events).toContainEqual({
+        type: 'uploaded',
+        remotePath: '/Documents/Folder/file.txt',
+        localPath: '/local/mirror/file.txt',
+      });
+    });
+
+    it('invalidates etagMap so the next sync re-evaluates the file', async () => {
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1'),
+      ]);
+      await service.start(BASE_OPTIONS);
+
+      await service.writeFile('/local/mirror/file.txt', 'updated');
+      mockFileService.download.mockClear();
+
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-2'),
+      ]);
+      mockWs.emit('message', { data: 'notify_file' });
+      await flush();
+
+      expect(mockFileService.download).toHaveBeenCalledWith('/Documents/Folder/file.txt');
+    });
+  });
+
+  describe('deleteFile()', () => {
+    it('throws when service is not started', async () => {
+      await expect(service.deleteFile('/local/mirror/file.txt')).rejects.toThrow(
+        'Service not started',
+      );
+    });
+
+    it('deletes the local file', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.deleteFile('/local/mirror/file.txt');
+
+      expect(unlink).toHaveBeenCalledWith('/local/mirror/file.txt');
+    });
+
+    it('deletes the file on the remote path via NextcloudFileService', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.deleteFile('/local/mirror/file.txt');
+
+      expect(mockFileService.deleteFile).toHaveBeenCalledWith('/Documents/Folder/file.txt');
+    });
+
+    it('maps nested local paths to correct remote paths', async () => {
+      await service.start(BASE_OPTIONS);
+
+      await service.deleteFile('/local/mirror/sub/deep/file.txt');
+
+      expect(mockFileService.deleteFile).toHaveBeenCalledWith(
+        '/Documents/Folder/sub/deep/file.txt',
+      );
+    });
+
+    it('removes the entry from etagMap so the next sync does not re-create the file locally', async () => {
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
+        .mockResolvedValueOnce([]);
+      await service.start(BASE_OPTIONS);
+
+      await service.deleteFile('/local/mirror/file.txt');
+      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+
+      mockWs.emit('message', { data: 'notify_file' });
+      await flush();
+
+      expect(unlink).toHaveBeenCalledTimes(1);
     });
   });
 });

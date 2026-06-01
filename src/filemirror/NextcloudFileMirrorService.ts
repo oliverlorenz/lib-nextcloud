@@ -1,7 +1,7 @@
-import { mkdir, stat, unlink, writeFile } from 'fs/promises';
+import { mkdir, stat, unlink, writeFile as writeFileToFs } from 'fs/promises';
 import { dirname, join } from 'path';
-import { AuthType, createClient, type FileStat, type WebDAVClient } from 'webdav';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { NextcloudFileService, type DirectoryEntry } from '../files';
 import type { NextcloudFileMirrorOptions } from './NextcloudFileMirrorTypes';
 
 const DEFAULT_POLL_INTERVAL_MS = 30_000;
@@ -19,6 +19,7 @@ export class NextcloudFileMirrorService {
       ncUsername,
       ncAppPassword,
       new NextcloudHeaderService(),
+      NextcloudFileService.create(ncBasePath, ncUsername, ncAppPassword),
     );
   }
 
@@ -27,10 +28,10 @@ export class NextcloudFileMirrorService {
     private readonly ncUsername: string,
     private readonly ncAppPassword: string,
     private readonly headerService: NextcloudHeaderService,
+    private readonly fileService: NextcloudFileService,
     private readonly wsFactory: (url: string) => WebSocket = (url) => new WebSocket(url),
   ) {}
 
-  private webdav: WebDAVClient | undefined;
   private ws: WebSocket | undefined;
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private readonly etagMap = new Map<string, string>();
@@ -54,6 +55,31 @@ export class NextcloudFileMirrorService {
       clearInterval(this.pollTimer);
       this.pollTimer = undefined;
     }
+  }
+
+  public async writeFile(localFilePath: string, contents: string | Buffer): Promise<void> {
+    if (this.options === undefined) throw new Error('Service not started');
+    const { localPath, remotePath } = this.options;
+    const remoteFilePath = this.localToRemotePath(localPath, localFilePath, remotePath);
+    const buffer = typeof contents === 'string' ? Buffer.from(contents) : contents;
+    await mkdir(dirname(localFilePath), { recursive: true });
+    await writeFileToFs(localFilePath, buffer);
+    await this.fileService.upload(remoteFilePath, buffer);
+    this.etagMap.delete(remoteFilePath);
+    this.options.onEvent?.({
+      type: 'uploaded',
+      remotePath: remoteFilePath,
+      localPath: localFilePath,
+    });
+  }
+
+  public async deleteFile(localFilePath: string): Promise<void> {
+    if (this.options === undefined) throw new Error('Service not started');
+    const { localPath, remotePath } = this.options;
+    const remoteFilePath = this.localToRemotePath(localPath, localFilePath, remotePath);
+    await unlink(localFilePath);
+    await this.fileService.deleteFile(remoteFilePath);
+    this.etagMap.delete(remoteFilePath);
   }
 
   private async connectNotifyPush(): Promise<void> {
@@ -109,17 +135,15 @@ export class NextcloudFileMirrorService {
     this.syncing = true;
     try {
       const { remotePath, localPath } = this.options;
-      const stats = (await this.getWebDavClient().getDirectoryContents(remotePath, {
-        deep: true,
-      })) as FileStat[];
+      const entries = await this.fileService.listDirectoryContents(remotePath, { deep: true });
 
-      const remoteFiles = stats.filter((s) => s.type === 'file');
-      const remotePathSet = new Set(remoteFiles.map((f) => f.filename));
+      const remoteFiles = entries.filter((e) => e.type === 'file');
+      const remotePathSet = new Set(remoteFiles.map((e) => e.filename));
 
-      for (const file of remoteFiles) {
-        const etagKey = file.etag ?? file.lastmod;
-        if (this.etagMap.get(file.filename) === etagKey) continue;
-        await this.syncFile(file, localPath, remotePath);
+      for (const entry of remoteFiles) {
+        const etagKey = entry.etag ?? entry.lastmod;
+        if (this.etagMap.get(entry.filename) === etagKey) continue;
+        await this.syncFile(entry, localPath, remotePath);
       }
 
       for (const trackedPath of this.etagMap.keys()) {
@@ -134,37 +158,40 @@ export class NextcloudFileMirrorService {
     }
   }
 
-  private async syncFile(file: FileStat, localPath: string, remotePath: string): Promise<void> {
+  private async syncFile(
+    entry: DirectoryEntry,
+    localPath: string,
+    remotePath: string,
+  ): Promise<void> {
     if (this.options === undefined) return;
-    const localFilePath = this.remoteToLocalPath(remotePath, file.filename, localPath);
+    const localFilePath = this.remoteToLocalPath(remotePath, entry.filename, localPath);
 
-    if ((await this.resolveConflict(file, localFilePath)) === 'local') {
-      this.etagMap.set(file.filename, file.etag ?? file.lastmod);
+    if ((await this.resolveConflict(entry, localFilePath)) === 'local') {
+      this.etagMap.set(entry.filename, entry.etag ?? entry.lastmod);
       return;
     }
 
-    const contents = await this.getWebDavClient().getFileContents(file.filename);
-    const buffer = contents as unknown as Buffer;
+    const buffer = await this.fileService.download(entry.filename);
     await mkdir(dirname(localFilePath), { recursive: true });
-    await writeFile(localFilePath, buffer);
-    this.etagMap.set(file.filename, file.etag ?? file.lastmod);
+    await writeFileToFs(localFilePath, buffer);
+    this.etagMap.set(entry.filename, entry.etag ?? entry.lastmod);
 
     this.options.onEvent?.({
       type: 'synced',
-      remotePath: file.filename,
+      remotePath: entry.filename,
       localPath: localFilePath,
     });
   }
 
   private async resolveConflict(
-    file: FileStat,
+    entry: DirectoryEntry,
     localFilePath: string,
   ): Promise<'remote' | 'local'> {
     if (this.options?.onConflict === undefined) return 'remote';
     const localStats = await stat(localFilePath).catch(() => undefined);
     if (localStats === undefined) return 'remote';
-    if (localStats.mtimeMs <= new Date(file.lastmod).getTime()) return 'remote';
-    return this.options.onConflict(file.filename, localFilePath);
+    if (localStats.mtimeMs <= new Date(entry.lastmod).getTime()) return 'remote';
+    return this.options.onConflict(entry.filename, localFilePath);
   }
 
   private async deleteLocalFile(localFilePath: string, remoteFilePath: string): Promise<void> {
@@ -185,6 +212,13 @@ export class NextcloudFileMirrorService {
     return join(localPath, relative);
   }
 
+  private localToRemotePath(localPath: string, localFilePath: string, remotePath: string): string {
+    const base = localPath.endsWith('/') ? localPath.slice(0, -1) : localPath;
+    const remoteBase = remotePath.endsWith('/') ? remotePath.slice(0, -1) : remotePath;
+    const relative = localFilePath.slice(base.length).replace(/^\//, '');
+    return `${remoteBase}/${relative}`;
+  }
+
   private async getPreAuthToken(): Promise<string> {
     const response = await fetch(`${this.ncBasePath}/ocs/v2.php/apps/notify_push/api/v1/pre_auth`, {
       method: 'POST',
@@ -195,14 +229,5 @@ export class NextcloudFileMirrorService {
     }
     const data = (await response.json()) as { ocs: { data: string } };
     return data.ocs.data;
-  }
-
-  private getWebDavClient(): WebDAVClient {
-    this.webdav ??= createClient(`${this.ncBasePath}/remote.php/webdav/`, {
-      authType: AuthType.Password,
-      username: this.ncUsername,
-      password: this.ncAppPassword,
-    });
-    return this.webdav;
   }
 }
