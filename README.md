@@ -68,11 +68,26 @@ mirror.stop();
 | `onConflict` | `(remotePath, localPath) => 'remote' \| 'local'` | `undefined` | Called when the local file is newer than the remote; remote wins when omitted |
 | `onEvent` | `(event: NextcloudMirrorEvent) => void` | `undefined` | Fired after each file is synced or deleted locally |
 
+**Writing and deleting files**
+
+Use `writeFile` and `deleteFile` to write to the mirror — the service writes locally and syncs to Nextcloud in one call:
+
+```ts
+// Write (creates or updates locally + uploads to Nextcloud)
+await mirror.writeFile('/local/mirror/notes.txt', Buffer.from('hello'));
+await mirror.writeFile('/local/mirror/notes.txt', 'hello'); // string also accepted
+
+// Delete (removes locally + deletes from Nextcloud)
+await mirror.deleteFile('/local/mirror/notes.txt');
+```
+
+Both methods throw `'Service not started'` if called before `start()`.
+
 **`NextcloudMirrorEvent`**
 
 | Field | Type | Description |
 |---|---|---|
-| `type` | `'synced' \| 'deleted'` | Whether the file was downloaded or removed locally |
+| `type` | `'synced' \| 'deleted' \| 'uploaded'` | `synced` = downloaded from Nextcloud, `deleted` = removed locally, `uploaded` = written via `writeFile` |
 | `remotePath` | `string` | Full WebDAV path of the file |
 | `localPath` | `string` | Absolute local path of the file |
 

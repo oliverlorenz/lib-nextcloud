@@ -1,5 +1,5 @@
 export type NextcloudMirrorEvent = {
-  type: 'synced' | 'deleted';
+  type: 'synced' | 'deleted' | 'uploaded';
   remotePath: string;
   localPath: string;
 };

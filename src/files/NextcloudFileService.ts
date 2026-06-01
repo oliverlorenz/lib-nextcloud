@@ -6,6 +6,7 @@ export type DirectoryEntry = {
   filename: string;
   type: 'file' | 'directory';
   lastmod: string;
+  etag: string | null;
 };
 
 const SHARE_TYPE = {
@@ -173,7 +174,12 @@ export class NextcloudFileService {
     const entries = (await this.getWebDavClient().getDirectoryContents(ncPath, {
       deep: options.deep ?? false,
     })) as FileStat[];
-    return entries.map((e) => ({ filename: e.filename, type: e.type, lastmod: e.lastmod }));
+    return entries.map((e) => ({
+      filename: e.filename,
+      type: e.type,
+      lastmod: e.lastmod,
+      etag: e.etag,
+    }));
   }
 
   public async createFileFromTemplate(targetPath: string, templatePath: string): Promise<string> {
