@@ -1,3 +1,9 @@
+## [2.2.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v2.1.0...v2.2.0) (2026-06-01)
+
+### Features
+
+* add NextcloudFileMirrorService with bidirectional sync and notify_push support ([#148](https://github.com/oliverlorenz/lib-nextcloud/issues/148)) ([0b4a0e3](https://github.com/oliverlorenz/lib-nextcloud/commit/0b4a0e35308baff72bc9891bf51e7231fda9e616))
+
 ## [2.1.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v2.0.0...v2.1.0) (2026-05-31)
 
 ### Features
