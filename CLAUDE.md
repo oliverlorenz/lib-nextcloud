@@ -31,7 +31,7 @@ Releases are fully automated via `semantic-release`. No manual steps required af
 **The PR title is the release signal.** Because all PRs are squash-merged, the PR title becomes the commit message on `main`. `semantic-release` reads these commits to determine the version bump, generate `CHANGELOG.md`, create the GitHub Release, and publish to GitHub Packages.
 
 | PR title prefix | Version bump | In release notes |
-|---|---|---|
+| --- | --- | --- |
 | `feat: …` | minor (1.**x**.0) | ✅ Features |
 | `fix: …` | patch (1.x.**x**) | ✅ Bug Fixes |
 | `perf: …` / `revert: …` | patch (1.x.**x**) | ✅ |
@@ -130,7 +130,7 @@ A class with a single public `mapFoo(raw: ExternalType): NextcloudFoo` method. O
 ## Two API styles
 
 | Style | Used for | Auth header |
-|---|---|---|
+| --- | --- | --- |
 | WebDAV (via `webdav` library) | File up/download, directory ops, CardDAV contacts, CalDAV calendars | AuthType.Password passed to `createClient` |
 | OCS REST (native `fetch`) | Sharing, tags, talk, polls | `getOCSHeaders()` from `NextcloudHeaderService` |
 
