@@ -64,6 +64,7 @@ export class NextcloudFileMirrorService {
     const buffer = typeof contents === 'string' ? Buffer.from(contents) : contents;
     await mkdir(dirname(localFilePath), { recursive: true });
     await writeFileToFs(localFilePath, buffer);
+    await this.fileService.createDirectory(dirname(remoteFilePath));
     await this.fileService.upload(remoteFilePath, buffer);
     this.etagMap.delete(remoteFilePath);
     this.options.onEvent?.({
