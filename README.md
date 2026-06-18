@@ -61,7 +61,7 @@ mirror.stop();
 ```
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `remotePath` | `string` | — | Nextcloud folder to mirror (WebDAV path) |
 | `localPath` | `string` | — | Local directory to mirror into |
 | `pollIntervalMs` | `number` | `30_000` | Fallback poll interval when `notify_push` is unavailable |
@@ -86,7 +86,7 @@ Both methods throw `'Service not started'` if called before `start()`.
 **`NextcloudMirrorEvent`**
 
 | Field | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `type` | `'synced' \| 'deleted' \| 'uploaded'` | `synced` = downloaded from Nextcloud, `deleted` = removed locally, `uploaded` = written via `writeFile` |
 | `remotePath` | `string` | Full WebDAV path of the file |
 | `localPath` | `string` | Absolute local path of the file |
@@ -120,7 +120,7 @@ const files = NextcloudFileService.create('https://nc.example.com', 'user', 'pas
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `upload(path, buffer)` | Upload a file buffer to a WebDAV path |
 | `bulkUpload(directory, list)` | Upload multiple files into a directory |
 | `download(path)` | Download a file as a `Buffer` |
@@ -175,7 +175,7 @@ const calendar = NextcloudCalendarService.create('https://nc.example.com', 'user
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `getEvents(calendarName, start?, end?)` | Fetch events from a calendar, optionally within a time range |
 | `isEventInTimeframe(calendarName, titleRegex, start, end)` | Check whether a matching event exists in a time range |
 
@@ -213,7 +213,7 @@ const contacts = NextcloudContactService.create('https://nc.example.com', 'user'
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `getContacts(addressBook, options?)` | Fetch all contacts from an address book |
 | `getContactUids(addressBook)` | List all contact UIDs in an address book |
 | `getContactByUid(addressBook, uid, options?)` | Fetch a single contact by UID |
@@ -283,7 +283,7 @@ const tags = NextcloudTagService.create('https://nc.example.com', 'user', 'pass'
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `getTags()` | Fetch all system tags |
 | `createTag(name)` | Create a new system tag (idempotent — 409 is treated as success) |
 | `addTagByIdToFileById(tagId, fileId)` | Assign a tag to a file by their numeric IDs |
@@ -306,7 +306,7 @@ const talk = NextcloudTalkService.create('https://nc.example.com', 'user', 'pass
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `sendTextMessage(channelId, message)` | Send a text message to a Talk room |
 | `sendFileMessage(channelId, filePath)` | Share a Nextcloud file into a Talk room |
 | `sendPollMessage(channelId, question, answers, maxVotes?)` | Post a poll to a Talk room |
@@ -337,7 +337,7 @@ const polls = NextcloudPollService.create('https://nc.example.com', 'user', 'pas
 ```
 
 | Method | Description |
-|---|---|
+| --- | --- |
 | `createTextPoll(title, options, config)` | Create a Polls app poll and return its public share URL |
 
 ```ts
@@ -386,7 +386,7 @@ Bug reports and pull requests are welcome at [github.com/oliverlorenz/lib-nextcl
 This project uses [Conventional Commits](https://www.conventionalcommits.org/). The PR title becomes the squash-merge commit message and drives automated versioning — no labels needed.
 
 | PR title prefix | Version bump | Appears in release notes |
-|---|---|---|
+| --- | --- | --- |
 | `feat: …` | minor | ✅ Features |
 | `fix: …` | patch | ✅ Bug Fixes |
 | `perf: …` / `refactor: …` / `docs: …` | patch | ✅ |
