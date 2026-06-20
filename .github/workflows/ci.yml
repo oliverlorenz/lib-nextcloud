@@ -126,4 +126,4 @@ jobs:
       - run: npm run build
       - run: npm run lint:publint
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm run lint:audit
