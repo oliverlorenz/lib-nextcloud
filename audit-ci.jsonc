@@ -1,0 +1,13 @@
+{
+  // Fail on high severity and above
+  "high": true,
+  // These advisories are in undici bundled inside npm@11.x (via @semantic-release/npm).
+  // The bundled copy cannot be patched via overrides — allowlisted until npm ships a fixed version.
+  // Tracking: https://github.com/oliverlorenz/lib-nextcloud/issues/167
+  "allowlist": [
+    "GHSA-vxpw-j846-p89q",
+    "GHSA-p88m-4jfj-68fv",
+    "GHSA-35p6-xmwp-9g52",
+    "GHSA-g8m3-5g58-fq7m"
+  ]
+}
