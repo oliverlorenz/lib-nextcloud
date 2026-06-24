@@ -66,7 +66,8 @@ mirror.stop();
 | `localPath` | `string` | — | Local directory to mirror into |
 | `pollIntervalMs` | `number` | `30_000` | Fallback poll interval when `notify_push` is unavailable |
 | `onConflict` | `(remotePath, localPath) => 'remote' \| 'local'` | `undefined` | Called when the local file is newer than the remote; remote wins when omitted |
-| `onEvent` | `(event: NextcloudMirrorEvent) => void` | `undefined` | Fired after each file is synced or deleted locally |
+| `onEvent` | `(event: NextcloudMirrorEvent) => void` | `undefined` | Fired after each file is synced, uploaded, or deleted locally |
+| `onChanged` | `(change: NextcloudFileChange) => void` | `undefined` | Fired whenever a mirrored file's content changes — when you write via `writeFile` (`source: 'local'`) or when a server-side change is downloaded (`source: 'remote'`) |
 
 **Writing and deleting files**
 
@@ -90,6 +91,24 @@ Both methods throw `'Service not started'` if called before `start()`.
 | `type` | `'synced' \| 'deleted' \| 'uploaded'` | `synced` = downloaded from Nextcloud, `deleted` = removed locally, `uploaded` = written via `writeFile` |
 | `remotePath` | `string` | Full WebDAV path of the file |
 | `localPath` | `string` | Absolute local path of the file |
+
+**`NextcloudFileChange`**
+
+Emitted via `onChanged` whenever a mirrored file's content changes, regardless of origin. Use it when you only care that "the file changed" and not about the specific event type.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `remotePath` | `string` | Full WebDAV path of the file |
+| `localPath` | `string` | Absolute local path of the file |
+| `source` | `'local' \| 'remote'` | `local` = written by you via `writeFile`, `remote` = changed on the server and downloaded |
+
+```ts
+await mirror.start({
+  remotePath: '/Documents/MyFolder',
+  localPath: '/local/mirror',
+  onChanged: ({ localPath, source }) => console.log(`changed (${source}):`, localPath),
+});
+```
 
 **Examples**
 

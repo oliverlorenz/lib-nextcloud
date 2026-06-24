@@ -72,6 +72,11 @@ export class NextcloudFileMirrorService {
       remotePath: remoteFilePath,
       localPath: localFilePath,
     });
+    this.options.onChanged?.({
+      remotePath: remoteFilePath,
+      localPath: localFilePath,
+      source: 'local',
+    });
   }
 
   public async deleteFile(localFilePath: string): Promise<void> {
@@ -181,6 +186,11 @@ export class NextcloudFileMirrorService {
       type: 'synced',
       remotePath: entry.filename,
       localPath: localFilePath,
+    });
+    this.options.onChanged?.({
+      remotePath: entry.filename,
+      localPath: localFilePath,
+      source: 'remote',
     });
   }
 
