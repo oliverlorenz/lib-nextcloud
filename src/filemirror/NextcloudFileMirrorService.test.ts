@@ -3,7 +3,11 @@ import { mock } from 'jest-mock-extended';
 import { NextcloudFileService } from '../files';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import { NextcloudFileMirrorService } from './NextcloudFileMirrorService';
-import type { NextcloudFileMirrorOptions, NextcloudMirrorEvent } from './NextcloudFileMirrorTypes';
+import type {
+  NextcloudFileChange,
+  NextcloudFileMirrorOptions,
+  NextcloudMirrorEvent,
+} from './NextcloudFileMirrorTypes';
 
 jest.mock('webdav', () => ({
   AuthType: { Password: 'password' },
@@ -626,6 +630,54 @@ describe('NextcloudFileMirrorService', () => {
       await flush();
 
       expect(unlink).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('onChanged', () => {
+    it('fires with source local after writing a file ourselves', async () => {
+      const changes: NextcloudFileChange[] = [];
+      await service.start({ ...BASE_OPTIONS, onChanged: (c) => changes.push(c) });
+
+      await service.writeFile('/local/mirror/file.txt', 'hello');
+
+      expect(changes).toContainEqual({
+        remotePath: '/Documents/Folder/file.txt',
+        localPath: '/local/mirror/file.txt',
+        source: 'local',
+      });
+    });
+
+    it('fires with source remote after a server-side change is downloaded', async () => {
+      mockFileService.listDirectoryContents.mockResolvedValue([
+        makeEntry('/Documents/Folder/file.txt', 'etag-1'),
+      ]);
+      const changes: NextcloudFileChange[] = [];
+
+      await service.start({ ...BASE_OPTIONS, onChanged: (c) => changes.push(c) });
+
+      expect(changes).toEqual([
+        {
+          remotePath: '/Documents/Folder/file.txt',
+          localPath: '/local/mirror/file.txt',
+          source: 'remote',
+        },
+      ]);
+    });
+
+    it('does not fire when a remote file is deleted', async () => {
+      mockFileService.listDirectoryContents
+        .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
+        .mockResolvedValueOnce([]);
+      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+      const changes: NextcloudFileChange[] = [];
+
+      await service.start({ ...BASE_OPTIONS, onChanged: (c) => changes.push(c) });
+      changes.length = 0;
+
+      mockWs.emit('message', { data: 'notify_file' });
+      await flush();
+
+      expect(changes).toEqual([]);
     });
   });
 });

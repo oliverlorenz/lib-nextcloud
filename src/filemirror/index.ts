@@ -1,2 +1,7 @@
 export { NextcloudFileMirrorService } from './NextcloudFileMirrorService';
-export type { NextcloudFileMirrorOptions, NextcloudMirrorEvent } from './NextcloudFileMirrorTypes';
+export type {
+  NextcloudFileMirrorOptions,
+  NextcloudMirrorEvent,
+  NextcloudFileChange,
+  NextcloudFileChangeSource,
+} from './NextcloudFileMirrorTypes';
