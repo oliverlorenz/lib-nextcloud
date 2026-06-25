@@ -103,7 +103,8 @@ describe('NextcloudCalendarService', () => {
         'https://nc.example.com/remote.php/dav/calendars/user/',
         expect.objectContaining({ method: 'PROPFIND' }),
       );
-      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1].headers;
+      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
+        .headers;
       expect(headers.get('Depth')).toBe('1');
     });
 
@@ -179,7 +180,8 @@ END:VCALENDAR</cal:calendar-data>
         'https://nc.example.com/remote.php/dav/calendars/user/personal/',
         expect.objectContaining({ method: 'REPORT' }),
       );
-      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1].headers;
+      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
+        .headers;
       expect(headers.get('Depth')).toBe('1');
     });
 
@@ -203,7 +205,14 @@ END:VCALENDAR</cal:calendar-data>
       const icalExpanderMock = require('ical-expander');
       icalExpanderMock.mockImplementationOnce(() => ({
         all: jest.fn().mockReturnValue({
-          events: [{ uid: 'uid-meeting', startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' }, summary: 'Meeting' }],
+          events: [
+            {
+              uid: 'uid-meeting',
+              startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
+              endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
+              summary: 'Meeting',
+            },
+          ],
           occurrences: [],
         }),
       }));
@@ -239,9 +248,7 @@ END:VCALENDAR</cal:calendar-data>
     it('returns an empty array when no events match', async () => {
       fetchSpy.mockResolvedValue({
         text: () =>
-          Promise.resolve(
-            '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"></d:multistatus>',
-          ),
+          Promise.resolve('<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"></d:multistatus>'),
       } as unknown as Response);
 
       const events = await service.searchEvents('personal', 'nonexistent');
@@ -389,13 +396,27 @@ END:VCALENDAR</cal:calendar-data>
       icalExpanderMock
         .mockImplementationOnce(() => ({
           all: jest.fn().mockReturnValue({
-            events: [{ uid: 'uid-meeting', startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' }, summary: 'Meeting' }],
+            events: [
+              {
+                uid: 'uid-meeting',
+                startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
+                endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
+                summary: 'Meeting',
+              },
+            ],
             occurrences: [],
           }),
         }))
         .mockImplementationOnce(() => ({
           all: jest.fn().mockReturnValue({
-            events: [{ uid: 'uid-in-range', startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' }, endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' }, summary: 'Event in range' }],
+            events: [
+              {
+                uid: 'uid-in-range',
+                startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
+                endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
+                summary: 'Event in range',
+              },
+            ],
             occurrences: [],
           }),
         }));
@@ -455,11 +476,18 @@ END:VCALENDAR</cal:calendar-data>
   describe('createEvent', () => {
     beforeEach(() => {
       fetchSpy.mockResolvedValue({ ok: true } as unknown as Response);
-      jest.spyOn(crypto, 'randomUUID').mockReturnValue('test-uid-1234' as ReturnType<typeof crypto.randomUUID>);
+      jest
+        .spyOn(crypto, 'randomUUID')
+        .mockReturnValue('test-uid-1234' as ReturnType<typeof crypto.randomUUID>);
     });
 
     it('makes a PUT request to the correct CalDAV URL', async () => {
-      await service.createEvent('personal', 'Team Standup', new Date('2024-03-01T09:00:00Z'), new Date('2024-03-01T09:30:00Z'));
+      await service.createEvent(
+        'personal',
+        'Team Standup',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+      );
 
       expect(fetchSpy).toHaveBeenCalledWith(
         'https://nc.example.com/remote.php/dav/calendars/user/personal/test-uid-1234.ics',
@@ -468,14 +496,25 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('sends Content-Type text/calendar header', async () => {
-      await service.createEvent('personal', 'Team Standup', new Date('2024-03-01T09:00:00Z'), new Date('2024-03-01T09:30:00Z'));
+      await service.createEvent(
+        'personal',
+        'Team Standup',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+      );
 
-      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1].headers;
+      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
+        .headers;
       expect(headers.get('Content-Type')).toBe('text/calendar; charset=utf-8');
     });
 
     it('sends ICS body with correct SUMMARY, DTSTART, DTEND, and UID', async () => {
-      await service.createEvent('personal', 'Team Standup', new Date('2024-03-01T09:00:00Z'), new Date('2024-03-01T09:30:00Z'));
+      await service.createEvent(
+        'personal',
+        'Team Standup',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+      );
 
       const body: string = (fetchSpy.mock.calls[0] as [string, { body: string }])[1].body;
       expect(body).toContain('SUMMARY:Team Standup');
@@ -485,7 +524,12 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('wraps event in valid VCALENDAR and VEVENT blocks', async () => {
-      await service.createEvent('personal', 'Meeting', new Date('2024-03-01T10:00:00Z'), new Date('2024-03-01T11:00:00Z'));
+      await service.createEvent(
+        'personal',
+        'Meeting',
+        new Date('2024-03-01T10:00:00Z'),
+        new Date('2024-03-01T11:00:00Z'),
+      );
 
       const body: string = (fetchSpy.mock.calls[0] as [string, { body: string }])[1].body;
       expect(body).toContain('BEGIN:VCALENDAR');
@@ -501,7 +545,13 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('makes a PUT request to the correct URL with the given UID', async () => {
-      await service.updateEvent('personal', 'existing-uid', 'Updated Title', new Date('2024-03-01T09:00:00Z'), new Date('2024-03-01T09:30:00Z'));
+      await service.updateEvent(
+        'personal',
+        'existing-uid',
+        'Updated Title',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+      );
 
       expect(fetchSpy).toHaveBeenCalledWith(
         'https://nc.example.com/remote.php/dav/calendars/user/personal/existing-uid.ics',
@@ -510,7 +560,13 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('sends ICS body with updated SUMMARY, DTSTART, and DTEND', async () => {
-      await service.updateEvent('personal', 'existing-uid', 'Updated Title', new Date('2024-06-01T14:00:00Z'), new Date('2024-06-01T15:00:00Z'));
+      await service.updateEvent(
+        'personal',
+        'existing-uid',
+        'Updated Title',
+        new Date('2024-06-01T14:00:00Z'),
+        new Date('2024-06-01T15:00:00Z'),
+      );
 
       const body: string = (fetchSpy.mock.calls[0] as [string, { body: string }])[1].body;
       expect(body).toContain('SUMMARY:Updated Title');
@@ -520,9 +576,16 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('sends Content-Type text/calendar header', async () => {
-      await service.updateEvent('personal', 'existing-uid', 'Title', new Date('2024-03-01T09:00:00Z'), new Date('2024-03-01T09:30:00Z'));
+      await service.updateEvent(
+        'personal',
+        'existing-uid',
+        'Title',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+      );
 
-      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1].headers;
+      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
+        .headers;
       expect(headers.get('Content-Type')).toBe('text/calendar; charset=utf-8');
     });
   });
@@ -544,7 +607,8 @@ END:VCALENDAR</cal:calendar-data>
     it('sends auth headers', async () => {
       await service.deleteEvent('personal', 'uid-to-delete');
 
-      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1].headers;
+      const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
+        .headers;
       expect(headers.get('Authorization')).not.toBeNull();
     });
   });

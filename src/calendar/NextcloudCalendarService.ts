@@ -228,14 +228,18 @@ export class NextcloudCalendarService {
     );
   }
 
-  private parseEventsFromReportXml(xml: string): { uid: string; start: Date; end: Date; title: string }[] {
+  private parseEventsFromReportXml(
+    xml: string,
+  ): { uid: string; start: Date; end: Date; title: string }[] {
     const results: { uid: string; start: Date; end: Date; title: string }[] = [];
     const blockPattern = /<d:response>([\s\S]*?)<\/d:response>/g;
     let match: RegExpExecArray | null;
 
     while ((match = blockPattern.exec(xml)) !== null) {
       const block = match[1];
-      const icsMatch = /<(?:\w+:)?calendar-data[^>]*>([\s\S]*?)<\/(?:\w+:)?calendar-data>/.exec(block);
+      const icsMatch = /<(?:\w+:)?calendar-data[^>]*>([\s\S]*?)<\/(?:\w+:)?calendar-data>/.exec(
+        block,
+      );
       if (icsMatch === null) continue;
 
       const ics = icsMatch[1].trim();
