@@ -105,8 +105,8 @@ export class NextcloudCalendarService {
       occurrences: { startDate: Date; endDate: Date; item: { uid: string; summary: string } }[];
     };
 
-    const event = events[0];
-    if (event !== undefined) {
+    if (events.length > 0) {
+      const event = events[0];
       return {
         uid: event.uid,
         start: new Date(event.startDate.toString()),
@@ -115,8 +115,8 @@ export class NextcloudCalendarService {
       };
     }
 
-    const occurrence = occurrences[0];
-    if (occurrence !== undefined) {
+    if (occurrences.length > 0) {
+      const occurrence = occurrences[0];
       return {
         uid: occurrence.item.uid,
         start: new Date(occurrence.startDate.toString()),
