@@ -58,7 +58,7 @@
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.0.1",
-    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.59.4",
     "audit-ci": "^7.1.0",
     "conventional-changelog-conventionalcommits": "^10.2.0",
