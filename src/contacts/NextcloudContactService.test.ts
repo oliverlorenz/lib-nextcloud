@@ -543,6 +543,157 @@ describe('NextcloudContactService', () => {
     });
   });
 
+  describe('searchContacts', () => {
+    const makeMultiStatusXml = (addressDataContents: string[]): string => {
+      const responses = addressDataContents
+        .map(
+          (data) =>
+            `<d:response><d:propstat><d:prop><card:address-data>${data}</card:address-data></d:prop></d:propstat></d:response>`,
+        )
+        .join('');
+      return `<?xml version="1.0" encoding="UTF-8"?><d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">${responses}</d:multistatus>`;
+    };
+
+    const emptyMultiStatusXml =
+      '<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav"></d:multistatus>';
+
+    const mockFetchXml = (xml: string): void => {
+      fetchSpy.mockResolvedValueOnce({
+        text: () => Promise.resolve(xml),
+      } as unknown as Response);
+    };
+
+    it('throws when no search criterion is provided', async () => {
+      await expect(service.searchContacts('contacts', {})).rejects.toThrow(
+        'At least one search criterion (phoneNumber, name, or email) must be provided',
+      );
+    });
+
+    it('does not perform a fetch when no search criterion is provided', async () => {
+      await expect(service.searchContacts('contacts', {})).rejects.toThrow();
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('sends a TEL prop-filter when phoneNumber is provided', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { phoneNumber: '+493333333333' });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('name="TEL"');
+      expect(options.body).toContain('+493333333333');
+    });
+
+    it('sends an FN prop-filter when name is provided', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { name: 'John' });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('name="FN"');
+      expect(options.body).toContain('John');
+    });
+
+    it('sends an EMAIL prop-filter when email is provided', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { email: 'john@example.com' });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('name="EMAIL"');
+      expect(options.body).toContain('john@example.com');
+    });
+
+    it('combines multiple criteria with test="allof"', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { phoneNumber: '+493333333333', name: 'John' });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('test="allof"');
+      expect(options.body).toContain('name="TEL"');
+      expect(options.body).toContain('name="FN"');
+    });
+
+    it('escapes XML special characters in criteria values', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { name: 'Max & Moritz <3>' });
+
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toContain('Max &amp; Moritz &lt;3&gt;');
+    });
+
+    it('uses REPORT method with Depth: 1 and Content-Type: application/xml', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('contacts', { phoneNumber: '+493333333333' });
+
+      const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://nc.example.com/remote.php/dav/addressbooks/users/user/contacts/');
+      expect(options.method).toBe('REPORT');
+      const headers = options.headers as Headers;
+      expect(headers.get('Depth')).toBe('1');
+      expect(headers.get('Content-Type')).toBe('application/xml');
+    });
+
+    it('returns an empty array when no address-data is found', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      const result = await service.searchContacts('contacts', { phoneNumber: '+499999999999' });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns all mapped contacts across multiple address-data blocks', async () => {
+      const vCardText1 = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
+      const vCardText2 = 'BEGIN:VCARD\nVERSION:4.0\nFN:Jane Doe\nEND:VCARD';
+      const mockCard1 = { FN: { value: 'John Doe' } };
+      const mockCard2 = { FN: { value: 'Jane Doe' } };
+      const mockContact1: NextcloudContact = {
+        uid: 'abc-123',
+        lastName: 'Doe',
+        firstName: 'John',
+        address: '',
+        postalCode: '',
+        city: '',
+        email: [],
+        phoneNumber: [],
+      };
+      const mockContact2: NextcloudContact = {
+        uid: 'def-456',
+        lastName: 'Doe',
+        firstName: 'Jane',
+        address: '',
+        postalCode: '',
+        city: '',
+        email: [],
+        phoneNumber: [],
+      };
+      mockFetchXml(makeMultiStatusXml([vCardText1, vCardText2]));
+      (parseVCards as jest.Mock)
+        .mockReturnValueOnce({ vCards: [mockCard1] })
+        .mockReturnValueOnce({ vCards: [mockCard2] });
+      mockMapper.mapContact.mockReturnValueOnce(mockContact1).mockReturnValueOnce(mockContact2);
+
+      const result = await service.searchContacts('contacts', { name: 'Doe' });
+
+      expect(result).toEqual([mockContact1, mockContact2]);
+    });
+
+    it('uses address book name in URL', async () => {
+      mockFetchXml(emptyMultiStatusXml);
+
+      await service.searchContacts('my-book', { phoneNumber: '+493333333333' });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/my-book/'),
+        expect.any(Object),
+      );
+    });
+  });
+
   describe('updateContact', () => {
     const uid = 'test-uid-123';
     const baseVCard = [
