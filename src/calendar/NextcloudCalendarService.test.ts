@@ -1,38 +1,32 @@
 import { NextcloudCalendarService } from './NextcloudCalendarService';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 
-jest.mock('ical-expander', () => {
-  return jest.fn().mockImplementation(() => ({
-    all: jest.fn().mockReturnValue({
-      events: [
-        {
-          uid: 'uid-meeting',
-          startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
-          endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
-          summary: 'Meeting',
-        },
-      ],
-      occurrences: [
-        {
-          startDate: { toString: (): string => '2024-01-16T10:00:00.000Z' },
-          endDate: { toString: (): string => '2024-01-16T11:00:00.000Z' },
-          item: { uid: 'uid-recurring', summary: 'Recurring' },
-        },
-      ],
-    }),
-    between: jest.fn().mockReturnValue({
-      events: [
-        {
-          uid: 'uid-in-range',
-          startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
-          endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
-          summary: 'Event in range',
-        },
-      ],
-      occurrences: [],
-    }),
-  }));
-});
+type FixtureEvent = {
+  uid: string;
+  summary: string;
+  start: string;
+  end: string;
+  rrule?: string;
+};
+
+function buildIcs(events: FixtureEvent[]): string {
+  const veventBlocks = events.map((e) =>
+    [
+      'BEGIN:VEVENT',
+      `UID:${e.uid}`,
+      `DTSTART:${e.start}`,
+      `DTEND:${e.end}`,
+      `SUMMARY:${e.summary}`,
+      ...(e.rrule !== undefined ? [`RRULE:${e.rrule}`] : []),
+      'END:VEVENT',
+    ].join('\r\n'),
+  );
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', ...veventBlocks, 'END:VCALENDAR'].join('\r\n');
+}
+
+const ICS_SINGLE_MEETING = buildIcs([
+  { uid: 'uid-meeting', summary: 'Meeting', start: '20240115T100000Z', end: '20240115T110000Z' },
+]);
 
 const PROPFIND_RESPONSE = `<?xml version="1.0"?>
 <d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
@@ -71,7 +65,8 @@ describe('NextcloudCalendarService', () => {
       new NextcloudHeaderService(),
     );
     fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
-      text: () => Promise.resolve('BEGIN:VCALENDAR\nEND:VCALENDAR'),
+      status: 200,
+      text: () => Promise.resolve(ICS_SINGLE_MEETING),
     } as unknown as Response);
   });
 
@@ -159,6 +154,8 @@ describe('NextcloudCalendarService', () => {
         <cal:calendar-data>BEGIN:VCALENDAR
 BEGIN:VEVENT
 UID:uid-meeting
+DTSTART:20240115T100000Z
+DTEND:20240115T110000Z
 SUMMARY:Team Meeting
 END:VEVENT
 END:VCALENDAR</cal:calendar-data>
@@ -202,47 +199,56 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('returns events parsed from the calendar-data in the response', async () => {
-      const icalExpanderMock = require('ical-expander');
-      icalExpanderMock.mockImplementationOnce(() => ({
-        all: jest.fn().mockReturnValue({
-          events: [
-            {
-              uid: 'uid-meeting',
-              startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
-              endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
-              summary: 'Meeting',
-            },
-          ],
-          occurrences: [],
-        }),
-      }));
-
       const events = await service.searchEvents('personal', 'Meeting');
 
       expect(events).toHaveLength(1);
       expect(events[0].uid).toBe('uid-meeting');
-      expect(events[0].title).toBe('Meeting');
+      expect(events[0].title).toBe('Team Meeting');
     });
 
-    it('returns occurrences parsed from the calendar-data in the response', async () => {
-      const icalExpanderMock = require('ical-expander');
-      icalExpanderMock.mockImplementationOnce(() => ({
-        all: jest.fn().mockReturnValue({
-          events: [],
-          occurrences: [
-            {
-              startDate: { toString: (): string => '2024-01-16T10:00:00.000Z' },
-              endDate: { toString: (): string => '2024-01-16T11:00:00.000Z' },
-              item: { uid: 'uid-recurring', summary: 'Recurring' },
-            },
-          ],
-        }),
-      }));
+    it('parses events from multiple response blocks', async () => {
+      const secondEventIcs = buildIcs([
+        {
+          uid: 'uid-recurring',
+          summary: 'Recurring',
+          start: '20240116T100000Z',
+          end: '20240116T110000Z',
+        },
+      ]);
+      fetchSpy.mockResolvedValue({
+        text: () =>
+          Promise.resolve(`<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+  <d:response>
+    <d:href>/remote.php/dav/calendars/user/personal/uid-meeting.ics</d:href>
+    <d:propstat>
+      <d:prop>
+        <cal:calendar-data>BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:uid-meeting
+DTSTART:20240115T100000Z
+DTEND:20240115T110000Z
+SUMMARY:Team Meeting
+END:VEVENT
+END:VCALENDAR</cal:calendar-data>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/calendars/user/personal/uid-recurring.ics</d:href>
+    <d:propstat>
+      <d:prop>
+        <cal:calendar-data>${secondEventIcs}</cal:calendar-data>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>`),
+      } as unknown as Response);
 
-      const events = await service.searchEvents('personal', 'Recurring');
+      const events = await service.searchEvents('personal', 'e');
 
-      expect(events).toHaveLength(1);
-      expect(events[0].uid).toBe('uid-recurring');
+      expect(events).toHaveLength(2);
+      expect(events.map((e) => e.uid)).toEqual(['uid-meeting', 'uid-recurring']);
     });
 
     it('returns an empty array when no events match', async () => {
@@ -258,6 +264,42 @@ END:VCALENDAR</cal:calendar-data>
   });
 
   describe('getEvents', () => {
+    const GET_EVENTS_ALL_ICS = buildIcs([
+      {
+        uid: 'uid-meeting',
+        summary: 'Meeting',
+        start: '20240115T100000Z',
+        end: '20240115T110000Z',
+      },
+      {
+        uid: 'uid-recurring',
+        summary: 'Recurring',
+        start: '20240116T100000Z',
+        end: '20240116T110000Z',
+        rrule: 'FREQ=DAILY;COUNT=1',
+      },
+    ]);
+    const GET_EVENTS_RANGE_ICS = buildIcs([
+      {
+        uid: 'uid-in-range',
+        summary: 'Event in range',
+        start: '20240110T100000Z',
+        end: '20240110T110000Z',
+      },
+      {
+        uid: 'uid-later',
+        summary: 'Later Event',
+        start: '20240301T090000Z',
+        end: '20240301T100000Z',
+      },
+    ]);
+
+    beforeEach(() => {
+      fetchSpy.mockResolvedValue({
+        text: () => Promise.resolve(GET_EVENTS_ALL_ICS),
+      } as unknown as Response);
+    });
+
     it('fetches from correct URL', async () => {
       await service.getEvents('personal');
 
@@ -290,6 +332,10 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('returns only range events when date range given', async () => {
+      fetchSpy.mockResolvedValue({
+        text: () => Promise.resolve(GET_EVENTS_RANGE_ICS),
+      } as unknown as Response);
+
       const events = await service.getEvents(
         'personal',
         new Date('2024-01-01'),
@@ -301,6 +347,10 @@ END:VCALENDAR</cal:calendar-data>
     });
 
     it('returns uid for range events', async () => {
+      fetchSpy.mockResolvedValue({
+        text: () => Promise.resolve(GET_EVENTS_RANGE_ICS),
+      } as unknown as Response);
+
       const events = await service.getEvents(
         'personal',
         new Date('2024-01-01'),
@@ -321,7 +371,7 @@ END:VCALENDAR</cal:calendar-data>
     beforeEach(() => {
       fetchSpy.mockResolvedValue({
         status: 200,
-        text: () => Promise.resolve('BEGIN:VCALENDAR\nEND:VCALENDAR'),
+        text: () => Promise.resolve(ICS_SINGLE_MEETING),
       } as unknown as Response);
     });
 
@@ -345,20 +395,22 @@ END:VCALENDAR</cal:calendar-data>
       });
     });
 
-    it('returns the event when found as an occurrence', async () => {
-      const icalExpanderMock = require('ical-expander');
-      icalExpanderMock.mockImplementationOnce(() => ({
-        all: jest.fn().mockReturnValue({
-          events: [],
-          occurrences: [
-            {
-              startDate: { toString: (): string => '2024-01-16T10:00:00.000Z' },
-              endDate: { toString: (): string => '2024-01-16T11:00:00.000Z' },
-              item: { uid: 'uid-recurring', summary: 'Recurring' },
-            },
-          ],
-        }),
-      }));
+    it('returns the event using its own DTSTART/DTEND when the resource has an RRULE', async () => {
+      fetchSpy.mockResolvedValue({
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-recurring',
+                summary: 'Recurring',
+                start: '20240116T100000Z',
+                end: '20240116T110000Z',
+                rrule: 'FREQ=DAILY;COUNT=5',
+              },
+            ]),
+          ),
+      } as unknown as Response);
 
       const event = await service.getEvent('personal', 'uid-recurring');
 
@@ -378,11 +430,11 @@ END:VCALENDAR</cal:calendar-data>
       expect(event).toBeUndefined();
     });
 
-    it('returns undefined when the ICS contains no events or occurrences', async () => {
-      const icalExpanderMock = require('ical-expander');
-      icalExpanderMock.mockImplementationOnce(() => ({
-        all: jest.fn().mockReturnValue({ events: [], occurrences: [] }),
-      }));
+    it('returns undefined when the ICS contains no VEVENT', async () => {
+      fetchSpy.mockResolvedValue({
+        status: 200,
+        text: () => Promise.resolve('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR'),
+      } as unknown as Response);
 
       const event = await service.getEvent('personal', 'empty-uid');
 
@@ -392,34 +444,25 @@ END:VCALENDAR</cal:calendar-data>
 
   describe('getEventsByUids', () => {
     it('returns all found events', async () => {
-      const icalExpanderMock = require('ical-expander');
-      icalExpanderMock
-        .mockImplementationOnce(() => ({
-          all: jest.fn().mockReturnValue({
-            events: [
-              {
-                uid: 'uid-meeting',
-                startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
-                endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
-                summary: 'Meeting',
-              },
-            ],
-            occurrences: [],
-          }),
-        }))
-        .mockImplementationOnce(() => ({
-          all: jest.fn().mockReturnValue({
-            events: [
-              {
-                uid: 'uid-in-range',
-                startDate: { toString: (): string => '2024-01-15T10:00:00.000Z' },
-                endDate: { toString: (): string => '2024-01-15T11:00:00.000Z' },
-                summary: 'Event in range',
-              },
-            ],
-            occurrences: [],
-          }),
-        }));
+      fetchSpy
+        .mockResolvedValueOnce({
+          status: 200,
+          text: () => Promise.resolve(ICS_SINGLE_MEETING),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          status: 200,
+          text: () =>
+            Promise.resolve(
+              buildIcs([
+                {
+                  uid: 'uid-in-range',
+                  summary: 'Event in range',
+                  start: '20240115T100000Z',
+                  end: '20240115T110000Z',
+                },
+              ]),
+            ),
+        } as unknown as Response);
 
       const events = await service.getEventsByUids('personal', ['uid-meeting', 'uid-in-range']);
 
@@ -431,7 +474,7 @@ END:VCALENDAR</cal:calendar-data>
       fetchSpy
         .mockResolvedValueOnce({
           status: 200,
-          text: () => Promise.resolve('BEGIN:VCALENDAR\nEND:VCALENDAR'),
+          text: () => Promise.resolve(ICS_SINGLE_MEETING),
         } as unknown as Response)
         .mockResolvedValueOnce({ status: 404 } as unknown as Response);
 
@@ -614,6 +657,22 @@ END:VCALENDAR</cal:calendar-data>
   });
 
   describe('isEventInTimeframe', () => {
+    beforeEach(() => {
+      fetchSpy.mockResolvedValue({
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-in-range',
+                summary: 'Event in range',
+                start: '20240110T100000Z',
+                end: '20240110T110000Z',
+              },
+            ]),
+          ),
+      } as unknown as Response);
+    });
+
     it('returns true when event title matches regex', async () => {
       const result = await service.isEventInTimeframe(
         'personal',
