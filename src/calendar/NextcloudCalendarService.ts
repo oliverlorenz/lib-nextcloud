@@ -1,6 +1,9 @@
+import { Calendar, parsePropertyDatetime } from '@oliverlorenz/lib-ical';
+import type { ICalComponent } from '@oliverlorenz/lib-ical';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 
-const icalExpander = require('ical-expander');
+const MIN_DATE = new Date(-8640000000000000);
+const MAX_DATE = new Date(8640000000000000);
 
 export class NextcloudCalendarService {
   public static create(
@@ -22,6 +25,8 @@ export class NextcloudCalendarService {
     private ncAppPassword: string,
     private nextcloudCommonService: NextcloudHeaderService,
   ) {}
+
+  private readonly calendar = Calendar.create();
 
   public async getCalendars(): Promise<{ name: string; displayName: string }[]> {
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
@@ -53,34 +58,15 @@ export class NextcloudCalendarService {
       },
     );
     const ics = await response.text();
-    const expander = new icalExpander({ ics, maxIterations: 100 });
+    const component = this.calendar.parse(ics);
+    const events = this.calendar.listEvents(component, start ?? MIN_DATE, end ?? MAX_DATE);
 
-    let events: {
-      events: { uid: string; startDate: Date; endDate: Date; summary: string }[];
-      occurrences: { startDate: Date; endDate: Date; item: { uid: string; summary: string } }[];
-    };
-
-    if (!start && !end) {
-      events = expander.all();
-    } else {
-      events = expander.between(start, end);
-    }
-
-    const mappedEvents = events.events.map((event) => ({
-      uid: event.uid,
-      start: new Date(event.startDate.toString()),
-      end: new Date(event.endDate.toString()),
-      title: event.summary,
-    }));
-
-    const mappedOccurrences = events.occurrences.map((occurrence) => ({
-      uid: occurrence.item.uid,
-      start: new Date(occurrence.startDate.toString()),
-      end: new Date(occurrence.endDate.toString()),
-      title: occurrence.item.summary,
-    }));
-
-    return mappedEvents.concat(mappedOccurrences);
+    return events
+      .map((event) => this.mapEventComponent(event))
+      .filter(
+        (event): event is { uid: string; start: Date; end: Date; title: string } =>
+          event !== undefined,
+      );
   }
 
   public async getEvent(
@@ -99,33 +85,10 @@ export class NextcloudCalendarService {
     }
 
     const ics = await response.text();
-    const expander = new icalExpander({ ics, maxIterations: 100 });
-    const { events, occurrences } = expander.all() as {
-      events: { uid: string; startDate: Date; endDate: Date; summary: string }[];
-      occurrences: { startDate: Date; endDate: Date; item: { uid: string; summary: string } }[];
-    };
+    const component = this.calendar.parse(ics);
+    const event = component.components.find((c) => c.name === 'VEVENT');
 
-    if (events.length > 0) {
-      const event = events[0];
-      return {
-        uid: event.uid,
-        start: new Date(event.startDate.toString()),
-        end: new Date(event.endDate.toString()),
-        title: event.summary,
-      };
-    }
-
-    if (occurrences.length > 0) {
-      const occurrence = occurrences[0];
-      return {
-        uid: occurrence.item.uid,
-        start: new Date(occurrence.startDate.toString()),
-        end: new Date(occurrence.endDate.toString()),
-        title: occurrence.item.summary,
-      };
-    }
-
-    return undefined;
+    return event === undefined ? undefined : this.mapEventComponent(event);
   }
 
   public async getEventOrFail(
@@ -243,32 +206,32 @@ export class NextcloudCalendarService {
       if (icsMatch === null) continue;
 
       const ics = icsMatch[1].trim();
-      const expander = new icalExpander({ ics, maxIterations: 100 });
-      const { events, occurrences } = expander.all() as {
-        events: { uid: string; startDate: Date; endDate: Date; summary: string }[];
-        occurrences: { startDate: Date; endDate: Date; item: { uid: string; summary: string } }[];
-      };
+      const component = this.calendar.parse(ics);
 
-      for (const event of events) {
-        results.push({
-          uid: event.uid,
-          start: new Date(event.startDate.toString()),
-          end: new Date(event.endDate.toString()),
-          title: event.summary,
-        });
-      }
-
-      for (const occurrence of occurrences) {
-        results.push({
-          uid: occurrence.item.uid,
-          start: new Date(occurrence.startDate.toString()),
-          end: new Date(occurrence.endDate.toString()),
-          title: occurrence.item.summary,
-        });
+      for (const event of component.components.filter((c) => c.name === 'VEVENT')) {
+        const mapped = this.mapEventComponent(event);
+        if (mapped !== undefined) {
+          results.push(mapped);
+        }
       }
     }
 
     return results;
+  }
+
+  private mapEventComponent(
+    event: ICalComponent,
+  ): { uid: string; start: Date; end: Date; title: string } | undefined {
+    const uid = event.properties.find((p) => p.name === 'UID')?.value;
+    const title = event.properties.find((p) => p.name === 'SUMMARY')?.value;
+    const start = parsePropertyDatetime(event.properties.find((p) => p.name === 'DTSTART'));
+    const end = parsePropertyDatetime(event.properties.find((p) => p.name === 'DTEND'));
+
+    if (uid === undefined || title === undefined || start === null || end === null) {
+      return undefined;
+    }
+
+    return { uid, start, end, title };
   }
 
   private escapeXml(value: string): string {
