@@ -26,6 +26,12 @@ export type GetContactsOptions = {
   properties?: readonly string[];
 };
 
+export type ContactSearchCriteria = {
+  phoneNumber?: string;
+  name?: string;
+  email?: string;
+};
+
 export class NextcloudContactService {
   public static create(
     ncBasePath: string,
@@ -72,10 +78,29 @@ export class NextcloudContactService {
     ncAddressBookName: string,
     phoneNumber: string,
   ): Promise<NextcloudContact | undefined> {
-    const escapedPhoneNumber = phoneNumber
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    const contacts = await this.searchContacts(ncAddressBookName, { phoneNumber });
+    return contacts[0];
+  }
+
+  public async searchContacts(
+    ncAddressBookName: string,
+    criteria: ContactSearchCriteria,
+  ): Promise<NextcloudContact[]> {
+    const propFilters: string[] = [];
+    if (criteria.phoneNumber !== undefined) {
+      propFilters.push(this.buildContactPropFilter('TEL', criteria.phoneNumber));
+    }
+    if (criteria.name !== undefined) {
+      propFilters.push(this.buildContactPropFilter('FN', criteria.name));
+    }
+    if (criteria.email !== undefined) {
+      propFilters.push(this.buildContactPropFilter('EMAIL', criteria.email));
+    }
+    if (propFilters.length === 0) {
+      throw new Error(
+        'At least one search criterion (phoneNumber, name, or email) must be provided',
+      );
+    }
 
     const body = `<?xml version="1.0" encoding="UTF-8"?>
 <card:addressbook-query xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav">
@@ -83,10 +108,8 @@ export class NextcloudContactService {
     <d:getetag/>
     <card:address-data/>
   </d:prop>
-  <card:filter test="anyof">
-    <card:prop-filter name="TEL">
-      <card:text-match collation="i;unicode-casemap" match-type="contains">${escapedPhoneNumber}</card:text-match>
-    </card:prop-filter>
+  <card:filter test="allof">
+${propFilters.join('\n')}
   </card:filter>
 </card:addressbook-query>`;
 
@@ -102,14 +125,16 @@ export class NextcloudContactService {
     const xmlText = await response.text();
     const addressDataRegex = /<[^:>\s]+:address-data[^>]*>([\s\S]*?)<\/[^:>\s]+:address-data>/g;
 
+    const contacts: NextcloudContact[] = [];
     for (const match of xmlText.matchAll(addressDataRegex)) {
       const vCardText = this.decodeXmlEntities(match[1]).trim();
       const parsed = parseVCards(vCardText).vCards;
-      if (parsed && parsed.length > 0) {
-        return this.nextcloudContactMapper.mapContact(parsed[0]);
+      if (!parsed) continue;
+      for (const vCard of parsed) {
+        contacts.push(this.nextcloudContactMapper.mapContact(vCard));
       }
     }
-    return undefined;
+    return contacts;
   }
 
   public async getContacts(
@@ -147,6 +172,16 @@ export class NextcloudContactService {
         `Failed to update contact "${contactUid}": HTTP ${response.status} — ${body}`,
       );
     }
+  }
+
+  private buildContactPropFilter(propName: string, value: string): string {
+    return `    <card:prop-filter name="${propName}">
+      <card:text-match collation="i;unicode-casemap" match-type="contains">${this.escapeXml(value)}</card:text-match>
+    </card:prop-filter>`;
+  }
+
+  private escapeXml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   private async getContactHrefs(ncAddressBookName: string): Promise<string[]> {
