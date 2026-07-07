@@ -738,6 +738,20 @@ END:VCALENDAR</cal:calendar-data>
       expect(body).toContain('BEGIN:VEVENT');
       expect(body).toContain('END:VEVENT');
     });
+
+    it('includes LOCATION and ATTENDEE when passed via options', async () => {
+      await service.createEvent(
+        'personal',
+        'Team Standup',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+        { location: 'Room 42', attendees: [{ email: 'ada@example.com', name: 'Ada Lovelace' }] },
+      );
+
+      const body: string = (fetchSpy.mock.calls[0] as [string, { body: string }])[1].body;
+      expect(body).toContain('LOCATION:Room 42');
+      expect(body).toContain('ATTENDEE;CN=Ada Lovelace:mailto:ada@example.com');
+    });
   });
 
   describe('updateEvent', () => {
@@ -788,6 +802,74 @@ END:VCALENDAR</cal:calendar-data>
       const headers: Headers = (fetchSpy.mock.calls[0] as [string, { headers: Headers }])[1]
         .headers;
       expect(headers.get('Content-Type')).toBe('text/calendar; charset=utf-8');
+    });
+
+    it('includes LOCATION and ATTENDEE when passed via options', async () => {
+      await service.updateEvent(
+        'personal',
+        'existing-uid',
+        'Title',
+        new Date('2024-03-01T09:00:00Z'),
+        new Date('2024-03-01T09:30:00Z'),
+        { location: 'Room 42', attendees: [{ email: 'ada@example.com' }] },
+      );
+
+      const body: string = (fetchSpy.mock.calls[0] as [string, { body: string }])[1].body;
+      expect(body).toContain('LOCATION:Room 42');
+      expect(body).toContain('ATTENDEE:mailto:ada@example.com');
+    });
+  });
+
+  describe('patchEvent', () => {
+    beforeEach(() => {
+      fetchSpy.mockImplementation((url) => {
+        if (typeof url === 'string' && url.endsWith('uid-meeting.ics')) {
+          return Promise.resolve({
+            status: 200,
+            text: () => Promise.resolve(ICS_SINGLE_MEETING),
+          } as unknown as Response);
+        }
+        return Promise.resolve({ ok: true } as unknown as Response);
+      });
+    });
+
+    it('merges the given changes onto the current event and PUTs the result', async () => {
+      const result = await service.patchEvent('personal', 'uid-meeting', {
+        title: 'Updated Meeting',
+        location: 'Room 42',
+      });
+
+      expect(result.title).toBe('Updated Meeting');
+      expect(result.location).toBe('Room 42');
+      expect(result.start).toEqual(new Date('2024-01-15T10:00:00.000Z'));
+
+      const [putUrl, putInit] = fetchSpy.mock.calls[1] as [
+        string,
+        { method: string; body: string },
+      ];
+      expect(putUrl).toBe(
+        'https://nc.example.com/remote.php/dav/calendars/user/personal/uid-meeting.ics',
+      );
+      expect(putInit.method).toBe('PUT');
+      expect(putInit.body).toContain('SUMMARY:Updated Meeting');
+      expect(putInit.body).toContain('LOCATION:Room 42');
+      expect(putInit.body).toContain('UID:uid-meeting');
+    });
+
+    it('keeps unspecified fields from the current event', async () => {
+      await service.patchEvent('personal', 'uid-meeting', { title: 'Only Title Changed' });
+
+      const [, putInit] = fetchSpy.mock.calls[1] as [string, { body: string }];
+      expect(putInit.body).toContain('DTSTART:20240115T100000Z');
+      expect(putInit.body).toContain('DTEND:20240115T110000Z');
+    });
+
+    it('throws when the event does not exist', async () => {
+      fetchSpy.mockResolvedValue({ status: 404 } as unknown as Response);
+
+      await expect(
+        service.patchEvent('personal', 'nonexistent-uid', { title: 'X' }),
+      ).rejects.toThrow('Event not found: nonexistent-uid');
     });
   });
 

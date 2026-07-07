@@ -12,3 +12,16 @@ export type NextcloudCalendarEvent = {
   location?: string;
   attendees?: NextcloudCalendarEventAttendee[];
 };
+
+export type NextcloudCalendarEventWriteOptions = {
+  location?: string;
+  attendees?: NextcloudCalendarEventAttendee[];
+};
+
+export type NextcloudCalendarEventPatch = {
+  title?: string;
+  start?: Date;
+  end?: Date;
+  location?: string;
+  attendees?: NextcloudCalendarEventAttendee[];
+};

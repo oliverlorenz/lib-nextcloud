@@ -1,9 +1,16 @@
-import { Calendar, parsePropertyDatetime } from '@oliverlorenz/lib-ical';
+import {
+  Calendar,
+  CalendarBuilder,
+  Serializer,
+  parsePropertyDatetime,
+} from '@oliverlorenz/lib-ical';
 import type { ICalComponent, ICalProperty } from '@oliverlorenz/lib-ical';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 import type {
   NextcloudCalendarEvent,
   NextcloudCalendarEventAttendee,
+  NextcloudCalendarEventPatch,
+  NextcloudCalendarEventWriteOptions,
 } from './NextcloudCalendarEvent';
 
 const MIN_DATE = new Date(-8640000000000000);
@@ -31,6 +38,7 @@ export class NextcloudCalendarService {
   ) {}
 
   private readonly calendar = Calendar.create();
+  private readonly serializer = new Serializer();
 
   public async getCalendars(): Promise<{ name: string; displayName: string }[]> {
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
@@ -144,6 +152,7 @@ export class NextcloudCalendarService {
     title: string,
     start: Date,
     end: Date,
+    options?: NextcloudCalendarEventWriteOptions,
   ): Promise<void> {
     const uid = crypto.randomUUID();
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
@@ -154,7 +163,7 @@ export class NextcloudCalendarService {
       {
         method: 'PUT',
         headers,
-        body: this.buildIcs(uid, title, start, end),
+        body: this.buildIcs({ uid, title, start, end, ...options }),
       },
     );
   }
@@ -165,6 +174,7 @@ export class NextcloudCalendarService {
     title: string,
     start: Date,
     end: Date,
+    options?: NextcloudCalendarEventWriteOptions,
   ): Promise<void> {
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
     headers.append('Content-Type', 'text/calendar; charset=utf-8');
@@ -174,9 +184,39 @@ export class NextcloudCalendarService {
       {
         method: 'PUT',
         headers,
-        body: this.buildIcs(uid, title, start, end),
+        body: this.buildIcs({ uid, title, start, end, ...options }),
       },
     );
+  }
+
+  public async patchEvent(
+    calendarName: string,
+    uid: string,
+    changes: NextcloudCalendarEventPatch,
+  ): Promise<NextcloudCalendarEvent> {
+    const current = await this.getEventOrFail(calendarName, uid);
+    const merged: NextcloudCalendarEvent = { ...current, ...changes };
+
+    const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
+    headers.append('Content-Type', 'text/calendar; charset=utf-8');
+
+    await fetch(
+      `${this.ncBasePath}/remote.php/dav/calendars/${this.ncUsername}/${calendarName}/${uid}.ics`,
+      {
+        method: 'PUT',
+        headers,
+        body: this.buildIcs({
+          uid,
+          title: merged.title,
+          start: merged.start,
+          end: merged.end,
+          location: merged.location,
+          attendees: merged.attendees,
+        }),
+      },
+    );
+
+    return merged;
   }
 
   public async deleteEvent(calendarName: string, uid: string): Promise<void> {
@@ -297,33 +337,25 @@ export class NextcloudCalendarService {
     return results;
   }
 
-  private buildIcs(uid: string, title: string, start: Date, end: Date): string {
-    return [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//oliverlorenz/lib-nextcloud//EN',
-      'BEGIN:VEVENT',
-      `UID:${uid}`,
-      `DTSTAMP:${this.formatDateForIcs(new Date())}`,
-      `DTSTART:${this.formatDateForIcs(start)}`,
-      `DTEND:${this.formatDateForIcs(end)}`,
-      `SUMMARY:${title}`,
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\r\n');
-  }
+  private buildIcs(event: {
+    uid: string;
+    title: string;
+    start: Date;
+    end: Date;
+    location?: string;
+    attendees?: NextcloudCalendarEventAttendee[];
+  }): string {
+    const calendar = new CalendarBuilder({ prodId: '-//oliverlorenz/lib-nextcloud//EN' })
+      .addEvent({
+        uid: event.uid,
+        summary: event.title,
+        start: event.start,
+        end: event.end,
+        location: event.location,
+        attendees: event.attendees,
+      })
+      .build();
 
-  private formatDateForIcs(date: Date): string {
-    const pad = (n: number): string => n.toString().padStart(2, '0');
-    return (
-      date.getUTCFullYear().toString() +
-      pad(date.getUTCMonth() + 1) +
-      pad(date.getUTCDate()) +
-      'T' +
-      pad(date.getUTCHours()) +
-      pad(date.getUTCMinutes()) +
-      pad(date.getUTCSeconds()) +
-      'Z'
-    );
+    return this.serializer.serialize(calendar);
   }
 }
