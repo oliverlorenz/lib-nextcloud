@@ -1,12 +1,20 @@
 import { NextcloudCalendarService } from './NextcloudCalendarService';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
 
+type FixtureAttendee = {
+  email: string;
+  cn?: string;
+  partstat?: string;
+};
+
 type FixtureEvent = {
   uid: string;
   summary: string;
   start: string;
   end: string;
   rrule?: string;
+  location?: string;
+  attendees?: FixtureAttendee[];
 };
 
 function buildIcs(events: FixtureEvent[]): string {
@@ -18,6 +26,15 @@ function buildIcs(events: FixtureEvent[]): string {
       `DTEND:${e.end}`,
       `SUMMARY:${e.summary}`,
       ...(e.rrule !== undefined ? [`RRULE:${e.rrule}`] : []),
+      ...(e.location !== undefined ? [`LOCATION:${e.location}`] : []),
+      ...(e.attendees ?? []).map((a) => {
+        const params = [
+          ...(a.cn !== undefined ? [`CN=${a.cn}`] : []),
+          ...(a.partstat !== undefined ? [`PARTSTAT=${a.partstat}`] : []),
+        ];
+        const paramString = params.length > 0 ? `;${params.join(';')}` : '';
+        return `ATTENDEE${paramString}:mailto:${a.email}`;
+      }),
       'END:VEVENT',
     ].join('\r\n'),
   );
@@ -261,6 +278,40 @@ END:VCALENDAR</cal:calendar-data>
 
       expect(events).toEqual([]);
     });
+
+    it('includes location and attendees from the calendar-data', async () => {
+      const icsWithLocationAndAttendee = buildIcs([
+        {
+          uid: 'uid-meeting',
+          summary: 'Team Meeting',
+          start: '20240115T100000Z',
+          end: '20240115T110000Z',
+          location: 'Room 42',
+          attendees: [{ email: 'ada@example.com', cn: 'Ada Lovelace', partstat: 'ACCEPTED' }],
+        },
+      ]);
+      fetchSpy.mockResolvedValue({
+        text: () =>
+          Promise.resolve(`<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+  <d:response>
+    <d:href>/remote.php/dav/calendars/user/personal/uid-meeting.ics</d:href>
+    <d:propstat>
+      <d:prop>
+        <cal:calendar-data>${icsWithLocationAndAttendee}</cal:calendar-data>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>`),
+      } as unknown as Response);
+
+      const events = await service.searchEvents('personal', 'Meeting');
+
+      expect(events[0].location).toBe('Room 42');
+      expect(events[0].attendees).toEqual([
+        { email: 'ada@example.com', name: 'Ada Lovelace', status: 'ACCEPTED' },
+      ]);
+    });
   });
 
   describe('getEvents', () => {
@@ -365,6 +416,29 @@ END:VCALENDAR</cal:calendar-data>
 
       expect(events[0].start).toBeInstanceOf(Date);
     });
+
+    it('includes location and attendees when present on the VEVENT', async () => {
+      fetchSpy.mockResolvedValue({
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-meeting',
+                summary: 'Meeting',
+                start: '20240115T100000Z',
+                end: '20240115T110000Z',
+                location: 'Room 42',
+                attendees: [{ email: 'ada@example.com', cn: 'Ada Lovelace' }],
+              },
+            ]),
+          ),
+      } as unknown as Response);
+
+      const events = await service.getEvents('personal');
+
+      expect(events[0].location).toBe('Room 42');
+      expect(events[0].attendees).toEqual([{ email: 'ada@example.com', name: 'Ada Lovelace' }]);
+    });
   });
 
   describe('getEvent', () => {
@@ -439,6 +513,90 @@ END:VCALENDAR</cal:calendar-data>
       const event = await service.getEvent('personal', 'empty-uid');
 
       expect(event).toBeUndefined();
+    });
+
+    it('includes location when the VEVENT has a LOCATION property', async () => {
+      fetchSpy.mockResolvedValue({
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-meeting',
+                summary: 'Meeting',
+                start: '20240115T100000Z',
+                end: '20240115T110000Z',
+                location: 'Room 42',
+              },
+            ]),
+          ),
+      } as unknown as Response);
+
+      const event = await service.getEvent('personal', 'uid-meeting');
+
+      expect(event?.location).toBe('Room 42');
+    });
+
+    it('omits location when the VEVENT has no LOCATION property', async () => {
+      const event = await service.getEvent('personal', 'uid-meeting');
+
+      expect(event?.location).toBeUndefined();
+    });
+
+    it('includes attendees with email, name, and status', async () => {
+      fetchSpy.mockResolvedValue({
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-meeting',
+                summary: 'Meeting',
+                start: '20240115T100000Z',
+                end: '20240115T110000Z',
+                attendees: [
+                  { email: 'ada@example.com', cn: 'Ada Lovelace', partstat: 'ACCEPTED' },
+                  { email: 'alan@example.com', cn: 'Alan Turing', partstat: 'NEEDS-ACTION' },
+                ],
+              },
+            ]),
+          ),
+      } as unknown as Response);
+
+      const event = await service.getEvent('personal', 'uid-meeting');
+
+      expect(event?.attendees).toEqual([
+        { email: 'ada@example.com', name: 'Ada Lovelace', status: 'ACCEPTED' },
+        { email: 'alan@example.com', name: 'Alan Turing', status: 'NEEDS-ACTION' },
+      ]);
+    });
+
+    it('includes attendee email without name/status when CN/PARTSTAT are absent', async () => {
+      fetchSpy.mockResolvedValue({
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            buildIcs([
+              {
+                uid: 'uid-meeting',
+                summary: 'Meeting',
+                start: '20240115T100000Z',
+                end: '20240115T110000Z',
+                attendees: [{ email: 'ada@example.com' }],
+              },
+            ]),
+          ),
+      } as unknown as Response);
+
+      const event = await service.getEvent('personal', 'uid-meeting');
+
+      expect(event?.attendees).toEqual([{ email: 'ada@example.com' }]);
+    });
+
+    it('omits attendees when the VEVENT has no ATTENDEE properties', async () => {
+      const event = await service.getEvent('personal', 'uid-meeting');
+
+      expect(event?.attendees).toBeUndefined();
     });
   });
 

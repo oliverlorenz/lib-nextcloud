@@ -1,6 +1,10 @@
 import { Calendar, parsePropertyDatetime } from '@oliverlorenz/lib-ical';
-import type { ICalComponent } from '@oliverlorenz/lib-ical';
+import type { ICalComponent, ICalProperty } from '@oliverlorenz/lib-ical';
 import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import type {
+  NextcloudCalendarEvent,
+  NextcloudCalendarEventAttendee,
+} from './NextcloudCalendarEvent';
 
 const MIN_DATE = new Date(-8640000000000000);
 const MAX_DATE = new Date(8640000000000000);
@@ -50,7 +54,7 @@ export class NextcloudCalendarService {
     calendarName: string,
     start?: Date,
     end?: Date,
-  ): Promise<{ uid: string; start: Date; end: Date; title: string }[]> {
+  ): Promise<NextcloudCalendarEvent[]> {
     const response = await fetch(
       `${this.ncBasePath}/remote.php/dav/calendars/${this.ncUsername}/${calendarName}?export`,
       {
@@ -63,16 +67,13 @@ export class NextcloudCalendarService {
 
     return events
       .map((event) => this.mapEventComponent(event))
-      .filter(
-        (event): event is { uid: string; start: Date; end: Date; title: string } =>
-          event !== undefined,
-      );
+      .filter((event): event is NextcloudCalendarEvent => event !== undefined);
   }
 
   public async getEvent(
     calendarName: string,
     uid: string,
-  ): Promise<{ uid: string; start: Date; end: Date; title: string } | undefined> {
+  ): Promise<NextcloudCalendarEvent | undefined> {
     const response = await fetch(
       `${this.ncBasePath}/remote.php/dav/calendars/${this.ncUsername}/${calendarName}/${uid}.ics`,
       {
@@ -91,10 +92,7 @@ export class NextcloudCalendarService {
     return event === undefined ? undefined : this.mapEventComponent(event);
   }
 
-  public async getEventOrFail(
-    calendarName: string,
-    uid: string,
-  ): Promise<{ uid: string; start: Date; end: Date; title: string }> {
+  public async getEventOrFail(calendarName: string, uid: string): Promise<NextcloudCalendarEvent> {
     const result = await this.getEvent(calendarName, uid);
     if (result === undefined) {
       throw new Error(`Event not found: ${uid}`);
@@ -105,7 +103,7 @@ export class NextcloudCalendarService {
   public async getEventsByUids(
     calendarName: string,
     uids: string[],
-  ): Promise<{ uid: string; start: Date; end: Date; title: string }[]> {
+  ): Promise<NextcloudCalendarEvent[]> {
     const results = await Promise.all(uids.map((uid) => this.getEvent(calendarName, uid)));
     return results.filter((event) => event !== undefined);
   }
@@ -113,7 +111,7 @@ export class NextcloudCalendarService {
   public async searchEvents(
     calendarName: string,
     query: string,
-  ): Promise<{ uid: string; start: Date; end: Date; title: string }[]> {
+  ): Promise<NextcloudCalendarEvent[]> {
     const headers = this.nextcloudCommonService.getHeaders(this.ncUsername, this.ncAppPassword);
     headers.append('Content-Type', 'application/xml; charset=utf-8');
     headers.append('Depth', '1');
@@ -191,10 +189,8 @@ export class NextcloudCalendarService {
     );
   }
 
-  private parseEventsFromReportXml(
-    xml: string,
-  ): { uid: string; start: Date; end: Date; title: string }[] {
-    const results: { uid: string; start: Date; end: Date; title: string }[] = [];
+  private parseEventsFromReportXml(xml: string): NextcloudCalendarEvent[] {
+    const results: NextcloudCalendarEvent[] = [];
     const blockPattern = /<d:response>([\s\S]*?)<\/d:response>/g;
     let match: RegExpExecArray | null;
 
@@ -219,9 +215,7 @@ export class NextcloudCalendarService {
     return results;
   }
 
-  private mapEventComponent(
-    event: ICalComponent,
-  ): { uid: string; start: Date; end: Date; title: string } | undefined {
+  private mapEventComponent(event: ICalComponent): NextcloudCalendarEvent | undefined {
     const uid = event.properties.find((p) => p.name === 'UID')?.value;
     const title = event.properties.find((p) => p.name === 'SUMMARY')?.value;
     const start = parsePropertyDatetime(event.properties.find((p) => p.name === 'DTSTART'));
@@ -231,7 +225,41 @@ export class NextcloudCalendarService {
       return undefined;
     }
 
-    return { uid, start, end, title };
+    const location = event.properties.find((p) => p.name === 'LOCATION')?.value;
+    const attendees = this.mapAttendees(event);
+
+    return {
+      uid,
+      start,
+      end,
+      title,
+      ...(location !== undefined && location !== '' ? { location } : {}),
+      ...(attendees.length > 0 ? { attendees } : {}),
+    };
+  }
+
+  private mapAttendees(event: ICalComponent): NextcloudCalendarEventAttendee[] {
+    return event.properties
+      .filter((p) => p.name === 'ATTENDEE')
+      .map((p) => this.mapAttendee(p))
+      .filter((attendee): attendee is NextcloudCalendarEventAttendee => attendee !== undefined);
+  }
+
+  private mapAttendee(property: ICalProperty): NextcloudCalendarEventAttendee | undefined {
+    const email = property.value.replace(/^mailto:/i, '').trim();
+    if (email === '') {
+      return undefined;
+    }
+
+    const params = property.params as Record<string, string | undefined>;
+    const name = params.CN;
+    const status = params.PARTSTAT;
+
+    return {
+      email,
+      ...(name !== undefined && name !== '' ? { name } : {}),
+      ...(status !== undefined && status !== '' ? { status } : {}),
+    };
   }
 
   private escapeXml(value: string): string {

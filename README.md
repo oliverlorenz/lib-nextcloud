@@ -195,15 +195,38 @@ const calendar = NextcloudCalendarService.create('https://nc.example.com', 'user
 
 | Method | Description |
 | --- | --- |
+| `getCalendars()` | List all calendars (`name`, `displayName`) |
 | `getEvents(calendarName, start?, end?)` | Fetch events from a calendar, optionally within a time range |
+| `getEvent(calendarName, uid)` | Fetch a single event by UID, or `undefined` if not found |
+| `getEventOrFail(calendarName, uid)` | Like `getEvent`, but throws if the event doesn't exist |
+| `getEventsByUids(calendarName, uids)` | Fetch multiple events by UID, skipping any that aren't found |
+| `searchEvents(calendarName, query)` | Find events whose `SUMMARY` contains `query` (case-insensitive) |
 | `isEventInTimeframe(calendarName, titleRegex, start, end)` | Check whether a matching event exists in a time range |
+| `createEvent(calendarName, title, start, end)` | Create a new event |
+| `updateEvent(calendarName, uid, title, start, end)` | Update an existing event |
+| `deleteEvent(calendarName, uid)` | Delete an event |
+
+Every returned event has the shape:
+
+```ts
+type NextcloudCalendarEvent = {
+  uid: string;
+  start: Date;
+  end: Date;
+  title: string;
+  location?: string;
+  attendees?: { email: string; name?: string; status?: string }[];
+};
+```
+
+`location` and `attendees` are only present when the underlying `VEVENT` has a `LOCATION` and/or `ATTENDEE` property. `attendees[].status` reflects the iCal `PARTSTAT` (e.g. `ACCEPTED`, `NEEDS-ACTION`).
 
 **Examples**
 
 ```ts
 // All events in a calendar
 const events = await calendar.getEvents('personal');
-// [{ start: Date, title: string }, ...]
+// [{ uid, start, end, title, location?, attendees? }, ...]
 
 // Events in a specific range
 const events = await calendar.getEvents(
@@ -211,6 +234,9 @@ const events = await calendar.getEvents(
   new Date('2025-01-01'),
   new Date('2025-01-31'),
 );
+
+// Find events by title
+const matches = await calendar.searchEvents('personal', 'standup');
 
 // Check for a meeting
 const hasMeeting = await calendar.isEventInTimeframe(
