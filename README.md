@@ -202,8 +202,9 @@ const calendar = NextcloudCalendarService.create('https://nc.example.com', 'user
 | `getEventsByUids(calendarName, uids)` | Fetch multiple events by UID, skipping any that aren't found |
 | `searchEvents(calendarName, query)` | Find events whose `SUMMARY` contains `query` (case-insensitive) |
 | `isEventInTimeframe(calendarName, titleRegex, start, end)` | Check whether a matching event exists in a time range |
-| `createEvent(calendarName, title, start, end)` | Create a new event |
-| `updateEvent(calendarName, uid, title, start, end)` | Update an existing event |
+| `createEvent(calendarName, title, start, end, options?)` | Create a new event, optionally with `location`/`attendees` |
+| `updateEvent(calendarName, uid, title, start, end, options?)` | Fully replace an existing event, optionally with `location`/`attendees` |
+| `patchEvent(calendarName, uid, changes)` | Partially update an event: reads the current event, merges `changes` (`title`, `start`, `end`, `location`, `attendees`), writes the result, and returns the merged event |
 | `deleteEvent(calendarName, uid)` | Delete an event |
 
 Every returned event has the shape:
@@ -245,6 +246,15 @@ const hasMeeting = await calendar.isEventInTimeframe(
   new Date('2025-06-01'),
   new Date('2025-06-07'),
 );
+
+// Create an event with a location and attendees
+await calendar.createEvent('personal', 'Team Standup', start, end, {
+  location: 'Room 42',
+  attendees: [{ email: 'ada@example.com', name: 'Ada Lovelace' }],
+});
+
+// Partially update just the location, keeping everything else as-is
+const updated = await calendar.patchEvent('personal', uid, { location: 'Room 7' });
 ```
 
 ---
