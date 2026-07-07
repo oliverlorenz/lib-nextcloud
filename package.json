@@ -85,7 +85,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
-    "@oliverlorenz/lib-ical": "^0.2.1",
+    "@oliverlorenz/lib-ical": "^0.2.3",
     "vcard4-ts": "^0.4.1",
     "webdav": "^5.10.0"
   }
