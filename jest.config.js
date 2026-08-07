@@ -1,10 +1,10 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 module.exports = {
-  testEnvironment: "node",
+  testEnvironment: 'node',
   transform: {
-    "^.+.tsx?$": ["ts-jest", {}],
+    '^.+.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
-  rootDir: "./src",
+  rootDir: './src',
   coverageThreshold: {
     global: {
       branches: 80,
@@ -13,5 +13,5 @@ module.exports = {
       statements: 80,
     },
   },
-  coverageDirectory: "../coverage",
+  coverageDirectory: '../coverage',
 };

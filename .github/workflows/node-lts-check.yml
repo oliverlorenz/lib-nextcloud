@@ -1,0 +1,52 @@
+name: Node LTS check
+
+on:
+  schedule:
+    # First day of every month at 06:00 UTC
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Verify .nvmrc matches current Active LTS
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Compare .nvmrc against the official Node.js release schedule
+        run: |
+          set -euo pipefail
+
+          pinned="$(tr -d '[:space:]' < .nvmrc)"
+          today="$(date -u +%Y-%m-%d)"
+
+          schedule="$(curl -fsSL https://raw.githubusercontent.com/nodejs/Release/main/schedule.json)"
+
+          # The current Active LTS is the newest release line whose LTS phase
+          # has started and whose support window hasn't ended yet. Older
+          # entries that satisfy the same filter are Maintenance LTS.
+          current_lts="$(echo "$schedule" | jq -r --arg today "$today" '
+            to_entries
+            | map(select(.value.lts != null and .value.lts <= $today and .value.end > $today))
+            | sort_by(.key | ltrimstr("v") | tonumber)
+            | last
+            | .key
+            | ltrimstr("v")
+          ')"
+
+          if [ -z "$current_lts" ] || [ "$current_lts" = "null" ]; then
+            echo "::error::Could not determine the current Node.js Active LTS from the release schedule."
+            exit 1
+          fi
+
+          echo "Pinned in .nvmrc: $pinned"
+          echo "Current Active LTS: $current_lts"
+
+          if [ "$pinned" != "$current_lts" ]; then
+            echo "::error::.nvmrc is pinned to Node $pinned, but the current Active LTS is Node $current_lts. Update .nvmrc (CI/dev tooling only — package.json 'engines' is the published minimum and doesn't need to change unless support for an older LTS is being dropped)."
+            exit 1
+          fi
+
+          echo "Up to date."

@@ -38,6 +38,7 @@ jobs:
               - '.prettierrc'
               - 'package.json'
               - 'package-lock.json'
+              - '.nvmrc'
             docs:
               - '*.md'
               - 'scripts/lint-readme.mjs'

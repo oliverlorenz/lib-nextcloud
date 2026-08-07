@@ -12,12 +12,12 @@
     "strictFunctionTypes": true ,
     "noImplicitThis": true ,
     "alwaysStrict": true,
+    "sourceMap": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
     "pretty": true,
     "declaration": true,
     "declarationMap": true,
-    "types": ["node", "jest"],
     "plugins": [
       {
         "name": "typescript-strict-plugin",

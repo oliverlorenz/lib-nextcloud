@@ -1,13 +1,17 @@
 {
   // Fail on high severity and above
   "high": true,
-  // These advisories are in undici bundled inside npm@11.x (via @semantic-release/npm).
-  // The bundled copy cannot be patched via overrides — allowlisted until npm ships a fixed version.
-  // Tracking: https://github.com/oliverlorenz/lib-nextcloud/issues/167
   "allowlist": [
-    "GHSA-vxpw-j846-p89q",
-    "GHSA-p88m-4jfj-68fv",
-    "GHSA-35p6-xmwp-9g52",
-    "GHSA-g8m3-5g58-fq7m"
+    // brace-expansion and ip-address, bundled inside the `npm` CLI package that
+    // `@semantic-release/npm` depends on (npm@11.19.0, dependency: ^11.6.2).
+    // `npm` bundles its own node_modules (bundleDependencies), so `npm audit fix`
+    // and package.json `overrides` cannot reach into it — the fix requires
+    // `@semantic-release/npm` to allow npm@12+, which ships patched versions.
+    // Dev-only (used at release/publish time), not part of the published package.
+    // Re-check by running `npm audit` after bumping `@semantic-release/npm` and
+    // remove these once it no longer resolves a vulnerable `npm`. See #167.
+    "GHSA-mh99-v99m-4gvg", // brace-expansion DoS, via npm@11.19.0 > minimatch
+    "GHSA-rgw5-rvv9-x895", // brace-expansion DoS, via npm@11.19.0 > minimatch
+    "GHSA-mwp4-54f8-5fhr" // ip-address SSRF bypass, via npm@11.19.0 > make-fetch-happen
   ]
 }
