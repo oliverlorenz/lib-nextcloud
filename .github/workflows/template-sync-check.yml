@@ -33,9 +33,9 @@ jobs:
       - name: Resolve template repository
         id: template
         run: |
-          TEMPLATE_REPO=$(gh api "repos/${{ github.repository }}" --jq '.template_repository.full_name // empty')
+          TEMPLATE_REPO="${{ vars.TEMPLATE_REPO }}"
           if [ -z "$TEMPLATE_REPO" ]; then
-            echo "::warning::Repository has no recorded template_repository (expected for the template repository itself, or for repos not created via 'Use this template') — skipping."
+            echo "::warning::Repository variable TEMPLATE_REPO is not set (expected for the template repository itself; for a repo generated from a template, set it via 'gh variable set TEMPLATE_REPO --body <owner>/<template-repo>') — skipping."
             echo "has_template=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
