@@ -26,6 +26,7 @@ labels:
   - name: refactor
   - name: test
   - name: dependencies
+  - name: template-sync
 
 branches:
   - name: main
