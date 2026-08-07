@@ -5,6 +5,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    commit-message:
+      prefix: "chore"
     groups:
       eslint:
         patterns:
@@ -39,6 +41,7 @@ updates:
           - "markdownlint-cli2"
           - "markdown-link-check"
           - "publint"
+          - "audit-ci"
           - "@arethetypeswrong/*"
       production:
         dependency-type: production
@@ -48,3 +51,5 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"

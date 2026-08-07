@@ -35,7 +35,7 @@ N/A
 
 ### Tests
 - [ ] New functionality is covered by unit tests (colocated `*.test.ts`)
-- [ ] `npm test` passes locally (build + jest + coverage)
+- [ ] `npm test` passes locally (build + jest + 80% coverage)
 - [ ] No `test.only` or `describe.only` left in test files
 
 ### Linting
