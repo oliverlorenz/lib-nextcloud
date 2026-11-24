@@ -1,4 +1,4 @@
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 
 export class NextcloudTagService {
   public static create(

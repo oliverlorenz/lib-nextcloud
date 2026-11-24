@@ -1,8 +1,8 @@
 import { parseVCards } from 'vcard4-ts';
 import type { VCard4 } from 'vcard4-ts';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
-import type { NextcloudContact } from './NextcloudContact';
-import { NextcloudContactMapper } from './NextcloudContactMapper';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
+import type { NextcloudContact } from './NextcloudContact.js';
+import { NextcloudContactMapper } from './NextcloudContactMapper.js';
 
 export const NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES = [
   'VERSION',

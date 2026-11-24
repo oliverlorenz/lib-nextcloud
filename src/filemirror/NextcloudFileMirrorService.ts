@@ -1,8 +1,8 @@
 import { mkdir, stat, unlink, writeFile as writeFileToFs } from 'fs/promises';
 import { dirname, join } from 'path';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
-import { NextcloudFileService, type DirectoryEntry } from '../files';
-import type { NextcloudFileMirrorOptions } from './NextcloudFileMirrorTypes';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
+import { NextcloudFileService, type DirectoryEntry } from '../files/index.js';
+import type { NextcloudFileMirrorOptions } from './NextcloudFileMirrorTypes.js';
 
 const DEFAULT_POLL_INTERVAL_MS = 30_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;

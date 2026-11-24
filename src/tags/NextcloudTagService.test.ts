@@ -1,9 +1,10 @@
-import { NextcloudTagService } from './NextcloudTagService';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { NextcloudTagService } from './NextcloudTagService.js';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 
 describe('NextcloudTagService', () => {
   let service: NextcloudTagService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     service = new NextcloudTagService(
@@ -12,15 +13,15 @@ describe('NextcloudTagService', () => {
       'pass',
       new NextcloudHeaderService(),
     );
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(''),
     } as unknown as Response);
-    jest.spyOn(console, 'log').mockImplementation();
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

@@ -5,13 +5,13 @@ import {
   parsePropertyDatetime,
 } from '@oliverlorenz/lib-ical';
 import type { ICalComponent, ICalProperty } from '@oliverlorenz/lib-ical';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 import type {
   NextcloudCalendarEvent,
   NextcloudCalendarEventAttendee,
   NextcloudCalendarEventPatch,
   NextcloudCalendarEventWriteOptions,
-} from './NextcloudCalendarEvent';
+} from './NextcloudCalendarEvent.js';
 
 const MIN_DATE = new Date(-8640000000000000);
 const MAX_DATE = new Date(8640000000000000);

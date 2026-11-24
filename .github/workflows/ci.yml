@@ -33,7 +33,7 @@ jobs:
               - 'src/**'
               - 'tsconfig.json'
               - 'eslint.config.mjs'
-              - 'jest.config.js'
+              - 'vitest.config.ts'
               - 'knip.json'
               - '.prettierrc'
               - 'package.json'

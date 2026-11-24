@@ -1,4 +1,4 @@
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 import { AuthType, createClient, type FileStat, type WebDAVClient } from 'webdav';
 import { basename } from 'path';
 

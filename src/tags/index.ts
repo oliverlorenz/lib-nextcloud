@@ -1,1 +1,1 @@
-export * from './NextcloudTagService';
+export * from './NextcloudTagService.js';

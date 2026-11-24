@@ -1,5 +1,6 @@
-import { NextcloudCalendarService } from './NextcloudCalendarService';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { NextcloudCalendarService } from './NextcloudCalendarService.js';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 
 type FixtureAttendee = {
   email: string;
@@ -72,7 +73,7 @@ const PROPFIND_RESPONSE = `<?xml version="1.0"?>
 
 describe('NextcloudCalendarService', () => {
   let service: NextcloudCalendarService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     service = new NextcloudCalendarService(
@@ -81,14 +82,14 @@ describe('NextcloudCalendarService', () => {
       'pass',
       new NextcloudHeaderService(),
     );
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       status: 200,
       text: () => Promise.resolve(ICS_SINGLE_MEETING),
     } as unknown as Response);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -677,9 +678,9 @@ END:VCALENDAR</cal:calendar-data>
   describe('createEvent', () => {
     beforeEach(() => {
       fetchSpy.mockResolvedValue({ ok: true } as unknown as Response);
-      jest
-        .spyOn(crypto, 'randomUUID')
-        .mockReturnValue('test-uid-1234' as ReturnType<typeof crypto.randomUUID>);
+      vi.spyOn(crypto, 'randomUUID').mockReturnValue(
+        'test-uid-1234' as ReturnType<typeof crypto.randomUUID>,
+      );
     });
 
     it('makes a PUT request to the correct CalDAV URL', async () => {

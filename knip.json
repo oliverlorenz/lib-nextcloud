@@ -3,7 +3,7 @@
   "ignoreDependencies": [
     "conventional-changelog-conventionalcommits",
     "eslint-config-prettier",
-    "jest-mock-extended"
+    "vitest-mock-extended"
   ],
   "rules": {
     "enumMembers": "off"

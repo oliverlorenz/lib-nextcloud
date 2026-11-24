@@ -1,5 +1,5 @@
-import type { NextcloudPollConfiguration } from './NextcloudPollTypes';
-import { NextcloudPollType } from './NextcloudPollTypes';
+import type { NextcloudPollConfiguration } from './NextcloudPollTypes.js';
+import { NextcloudPollType } from './NextcloudPollTypes.js';
 
 export class NextcloudPollService {
   public static create(

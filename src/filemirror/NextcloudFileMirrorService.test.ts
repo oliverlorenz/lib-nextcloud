@@ -1,24 +1,34 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+  type MockInstance,
+} from 'vitest';
 import { mkdir, stat, unlink, writeFile } from 'fs/promises';
-import { mock } from 'jest-mock-extended';
-import { NextcloudFileService } from '../files';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
-import { NextcloudFileMirrorService } from './NextcloudFileMirrorService';
+import { mock } from 'vitest-mock-extended';
+import { NextcloudFileService } from '../files/index.js';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
+import { NextcloudFileMirrorService } from './NextcloudFileMirrorService.js';
 import type {
   NextcloudFileChange,
   NextcloudFileMirrorOptions,
   NextcloudMirrorEvent,
-} from './NextcloudFileMirrorTypes';
+} from './NextcloudFileMirrorTypes.js';
 
-jest.mock('webdav', () => ({
+vi.mock('webdav', () => ({
   AuthType: { Password: 'password' },
-  createClient: jest.fn(),
+  createClient: vi.fn(),
 }));
 
-jest.mock('fs/promises', () => ({
-  writeFile: jest.fn(),
-  mkdir: jest.fn(),
-  unlink: jest.fn(),
-  stat: jest.fn(),
+vi.mock('fs/promises', () => ({
+  writeFile: vi.fn(),
+  mkdir: vi.fn(),
+  unlink: vi.fn(),
+  stat: vi.fn(),
 }));
 
 const flush = async (): Promise<void> => {
@@ -59,10 +69,10 @@ class MockWebSocket {
 
 describe('NextcloudFileMirrorService', () => {
   let service: NextcloudFileMirrorService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
   let mockFileService: ReturnType<typeof mock<NextcloudFileService>>;
   let mockWs: MockWebSocket;
-  let wsFactory: jest.Mock;
+  let wsFactory: Mock;
 
   const BASE_OPTIONS: NextcloudFileMirrorOptions = {
     remotePath: '/Documents/Folder',
@@ -81,12 +91,12 @@ describe('NextcloudFileMirrorService', () => {
   });
 
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
 
-    (writeFile as jest.Mock).mockResolvedValue(undefined);
-    (mkdir as jest.Mock).mockResolvedValue(undefined);
-    (unlink as jest.Mock).mockResolvedValue(undefined);
-    (stat as jest.Mock).mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    (writeFile as Mock).mockResolvedValue(undefined);
+    (mkdir as Mock).mockResolvedValue(undefined);
+    (unlink as Mock).mockResolvedValue(undefined);
+    (stat as Mock).mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
 
     mockFileService = mock<NextcloudFileService>();
     mockFileService.listDirectoryContents.mockResolvedValue([]);
@@ -95,9 +105,9 @@ describe('NextcloudFileMirrorService', () => {
     mockFileService.deleteFile.mockResolvedValue(undefined);
 
     mockWs = new MockWebSocket('ws://test');
-    wsFactory = jest.fn().mockReturnValue(mockWs);
+    wsFactory = vi.fn().mockReturnValue(mockWs);
 
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ ocs: { data: 'test-token' } }),
     } as unknown as Response);
@@ -114,8 +124,8 @@ describe('NextcloudFileMirrorService', () => {
 
   afterEach(() => {
     service.stop();
-    jest.restoreAllMocks();
-    jest.useRealTimers();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('create() returns an instance without manual dependency injection', () => {
@@ -184,28 +194,28 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('falls back to polling when pre_auth fails', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       fetchSpy.mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
 
       await service.start(BASE_OPTIONS);
 
-      jest.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(30_000);
       await Promise.resolve();
 
       expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
     });
 
     it('uses custom pollIntervalMs for fallback polling', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       fetchSpy.mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
 
       await service.start({ ...BASE_OPTIONS, pollIntervalMs: 5_000 });
 
-      jest.advanceTimersByTime(4_999);
+      vi.advanceTimersByTime(4_999);
       await Promise.resolve();
       expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
       await Promise.resolve();
       expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
     });
@@ -221,13 +231,13 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('cancels polling timer', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       fetchSpy.mockResolvedValue({ ok: false, status: 500 } as unknown as Response);
       await service.start(BASE_OPTIONS);
 
       service.stop();
       mockFileService.listDirectoryContents.mockClear();
-      jest.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(60_000);
 
       expect(mockFileService.listDirectoryContents).not.toHaveBeenCalled();
     });
@@ -264,23 +274,23 @@ describe('NextcloudFileMirrorService', () => {
 
   describe('WebSocket reconnect', () => {
     it('schedules reconnect when WebSocket closes unexpectedly', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       await service.start(BASE_OPTIONS);
 
       mockWs.emit('close');
-      jest.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(1_000);
       await flush();
 
       expect(wsFactory).toHaveBeenCalledTimes(2);
     });
 
     it('does not reconnect after stop()', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       await service.start(BASE_OPTIONS);
 
       service.stop();
       mockWs.emit('close');
-      jest.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(10_000);
       await flush();
 
       expect(wsFactory).toHaveBeenCalledTimes(1);
@@ -344,7 +354,7 @@ describe('NextcloudFileMirrorService', () => {
       mockFileService.listDirectoryContents
         .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
         .mockResolvedValueOnce([]);
-      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+      (stat as Mock).mockResolvedValue({ mtimeMs: Date.now() });
 
       await service.start(BASE_OPTIONS);
 
@@ -358,7 +368,7 @@ describe('NextcloudFileMirrorService', () => {
       mockFileService.listDirectoryContents
         .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
         .mockResolvedValueOnce([]);
-      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+      (stat as Mock).mockResolvedValue({ mtimeMs: Date.now() });
       const events: NextcloudMirrorEvent[] = [];
 
       await service.start({ ...BASE_OPTIONS, onEvent: (e) => events.push(e) });
@@ -389,7 +399,7 @@ describe('NextcloudFileMirrorService', () => {
 
   describe('conflict resolution', () => {
     it('downloads file without calling onConflict when no local file exists', async () => {
-      const onConflict = jest.fn();
+      const onConflict = vi.fn();
       mockFileService.listDirectoryContents.mockResolvedValue([
         makeEntry('/Documents/Folder/file.txt', 'etag-1'),
       ]);
@@ -401,11 +411,11 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('downloads without calling onConflict when local file is not newer', async () => {
-      const onConflict = jest.fn();
+      const onConflict = vi.fn();
       mockFileService.listDirectoryContents.mockResolvedValue([
         makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 12:00:00 GMT'),
       ]);
-      (stat as jest.Mock).mockResolvedValue({
+      (stat as Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T11:00:00Z').getTime(),
       });
 
@@ -416,11 +426,11 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('calls onConflict when local file is newer than remote', async () => {
-      const onConflict = jest.fn().mockReturnValue('remote');
+      const onConflict = vi.fn().mockReturnValue('remote');
       mockFileService.listDirectoryContents.mockResolvedValue([
         makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
       ]);
-      (stat as jest.Mock).mockResolvedValue({
+      (stat as Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
 
@@ -433,11 +443,11 @@ describe('NextcloudFileMirrorService', () => {
     });
 
     it('skips download when onConflict returns local', async () => {
-      const onConflict = jest.fn().mockReturnValue('local');
+      const onConflict = vi.fn().mockReturnValue('local');
       mockFileService.listDirectoryContents.mockResolvedValue([
         makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
       ]);
-      (stat as jest.Mock).mockResolvedValue({
+      (stat as Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
 
@@ -451,7 +461,7 @@ describe('NextcloudFileMirrorService', () => {
       mockFileService.listDirectoryContents.mockResolvedValue([
         makeEntry('/Documents/Folder/file.txt', 'etag-1', 'Thu, 01 Jan 2026 10:00:00 GMT'),
       ]);
-      (stat as jest.Mock).mockResolvedValue({
+      (stat as Mock).mockResolvedValue({
         mtimeMs: new Date('2026-01-01T12:00:00Z').getTime(),
       });
 
@@ -485,14 +495,14 @@ describe('NextcloudFileMirrorService', () => {
 
   describe('pre_auth', () => {
     it('falls back to polling (not WebSocket) when pre_auth endpoint returns non-ok', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       fetchSpy.mockResolvedValue({ ok: false, status: 503 } as unknown as Response);
 
       await service.start(BASE_OPTIONS);
 
       expect(wsFactory).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(30_000);
       await Promise.resolve();
 
       expect(mockFileService.listDirectoryContents).toHaveBeenCalledTimes(2);
@@ -624,7 +634,7 @@ describe('NextcloudFileMirrorService', () => {
       await service.start(BASE_OPTIONS);
 
       await service.deleteFile('/local/mirror/file.txt');
-      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+      (stat as Mock).mockResolvedValue({ mtimeMs: Date.now() });
 
       mockWs.emit('message', { data: 'notify_file' });
       await flush();
@@ -668,7 +678,7 @@ describe('NextcloudFileMirrorService', () => {
       mockFileService.listDirectoryContents
         .mockResolvedValueOnce([makeEntry('/Documents/Folder/file.txt', 'etag-1')])
         .mockResolvedValueOnce([]);
-      (stat as jest.Mock).mockResolvedValue({ mtimeMs: Date.now() });
+      (stat as Mock).mockResolvedValue({ mtimeMs: Date.now() });
       const changes: NextcloudFileChange[] = [];
 
       await service.start({ ...BASE_OPTIONS, onChanged: (c) => changes.push(c) });

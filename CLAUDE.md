@@ -5,8 +5,8 @@ TypeScript library for the Nextcloud API. Covers files (WebDAV + OCS sharing), c
 ## Commands
 
 ```bash
-npm test              # build + jest with coverage (also runs on pre-commit)
-npm run test:watch    # jest watch mode with HTML coverage
+npm test              # build + vitest with coverage (also runs on pre-commit)
+npm run test:watch    # vitest watch mode with coverage
 npm run build         # tsc compile → dist/
 npm run lint:eslint   # ESLint (also runs on pre-push)
 npm run lint:prettier # Prettier format check (also runs on pre-push)
@@ -160,9 +160,11 @@ Strict mode is fully enabled. The ESLint config adds:
 ## Testing
 
 - Test files colocated with source: `NextcloudFooService.test.ts` next to `NextcloudFooService.ts`
-- Use `jest-mock-extended` (`mock<T>()`) to mock dependencies
+- Tests use vitest; import `describe`, `it`, `expect`, `vi` etc. explicitly from `vitest` (no globals)
+- Use `vitest-mock-extended` (`mock<T>()`) to mock dependencies
 - No mocking of `NextcloudHeaderService` — inject it directly in tests
-- `jest.spyOn(global, 'fetch')` is the standard way to mock HTTP calls
+- `vi.spyOn(global, 'fetch')` is the standard way to mock HTTP calls
+- Mock external modules with `vi.mock('module', () => ({ ... }))`
 - Coverage threshold: 80% branches, functions, lines, statements
 - No `test.only` or `describe.only` — caught by ESLint
 
@@ -195,5 +197,6 @@ Run `git branch` and `git status` to confirm you are on `main` and the working t
 
 ## Requirements
 
-- Node >= 22.0.0
+- Node >= 22.12.0 (needed for `require()` of ESM by CommonJS consumers)
+- Package is ESM-only (`"type": "module"`, `module: nodenext`): every relative import needs an explicit `.js` extension, directory imports use `./foo/index.js`
 - Publish target: `https://npm.pkg.github.com`

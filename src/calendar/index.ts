@@ -1,2 +1,2 @@
-export * from './NextcloudCalendarService';
-export * from './NextcloudCalendarEvent';
+export * from './NextcloudCalendarService.js';
+export * from './NextcloudCalendarEvent.js';

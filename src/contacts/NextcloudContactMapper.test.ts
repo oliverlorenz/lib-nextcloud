@@ -1,4 +1,5 @@
-import { NextcloudContactMapper } from './NextcloudContactMapper';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { NextcloudContactMapper } from './NextcloudContactMapper.js';
 import type { VCard4 } from 'vcard4-ts';
 
 describe('NextcloudContactMapper', () => {

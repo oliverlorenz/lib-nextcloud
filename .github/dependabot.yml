@@ -15,12 +15,11 @@ updates:
           - "@typescript-eslint/*"
           - "eslint-config-prettier"
           - "eslint-plugin-*"
-      jest:
+      vitest:
         patterns:
-          - "jest"
-          - "ts-jest"
-          - "@types/jest"
-          - "jest-mock-extended"
+          - "vitest"
+          - "vitest-mock-extended"
+          - "@vitest/*"
       typescript:
         patterns:
           - "typescript"

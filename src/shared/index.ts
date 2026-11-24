@@ -1,1 +1,1 @@
-export * from './NextcloudHeaderService';
+export * from './NextcloudHeaderService.js';
