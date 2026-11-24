@@ -127,7 +127,7 @@ export class NextcloudFileService {
   }
 
   public stream(filePath: string): NodeJS.ReadableStream {
-    return this.getWebDavClient().createReadStream(filePath);
+    return this.getWebDavClient().createReadStream(filePath) as unknown as NodeJS.ReadableStream;
   }
 
   public async countFiles(
