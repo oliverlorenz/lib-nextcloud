@@ -1,4 +1,5 @@
-import { NextcloudHeaderService } from './NextcloudHeaderService';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { NextcloudHeaderService } from './NextcloudHeaderService.js';
 
 describe('NextcloudHeaderService', () => {
   let service: NextcloudHeaderService;

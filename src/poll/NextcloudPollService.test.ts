@@ -1,16 +1,17 @@
-import { NextcloudPollService } from './NextcloudPollService';
-import { NextcloudPollAccess, NextcloudPollShowResults } from './NextcloudPollTypes';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { NextcloudPollService } from './NextcloudPollService.js';
+import { NextcloudPollAccess, NextcloudPollShowResults } from './NextcloudPollTypes.js';
 
 describe('NextcloudPollService', () => {
   let service: NextcloudPollService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     service = new NextcloudPollService('https://nc.example.com', 'user', 'pass');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -28,7 +29,7 @@ describe('NextcloudPollService', () => {
       ({ ok: true, json: (): Promise<unknown> => Promise.resolve(data) }) as unknown as Response;
 
     it('creates poll with options and returns share URL', async () => {
-      fetchSpy = jest
+      fetchSpy = vi
         .spyOn(global, 'fetch')
         .mockResolvedValueOnce(okJson({ poll: { id: '42' } }))
         .mockResolvedValueOnce(okJson({}))
@@ -46,7 +47,7 @@ describe('NextcloudPollService', () => {
     });
 
     it('posts to poll creation endpoint', async () => {
-      fetchSpy = jest
+      fetchSpy = vi
         .spyOn(global, 'fetch')
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValue(okJson({ shares: [{ URL: 'https://url' }] }));
@@ -63,7 +64,7 @@ describe('NextcloudPollService', () => {
     });
 
     it('posts one request per option', async () => {
-      fetchSpy = jest
+      fetchSpy = vi
         .spyOn(global, 'fetch')
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValue(okJson({ shares: [{ URL: 'https://url' }] }));
@@ -80,7 +81,7 @@ describe('NextcloudPollService', () => {
     });
 
     it('throws when poll creation fails', async () => {
-      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -95,7 +96,7 @@ describe('NextcloudPollService', () => {
     });
 
     it('throws when adding a poll option fails', async () => {
-      fetchSpy = jest
+      fetchSpy = vi
         .spyOn(global, 'fetch')
         .mockResolvedValueOnce(okJson({ poll: { id: '1' } }))
         .mockResolvedValueOnce(okJson({}))

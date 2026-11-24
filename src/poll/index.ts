@@ -1,2 +1,2 @@
-export * from './NextcloudPollService';
-export * from './NextcloudPollTypes';
+export * from './NextcloudPollService.js';
+export * from './NextcloudPollTypes.js';

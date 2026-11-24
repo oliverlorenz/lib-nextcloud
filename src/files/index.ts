@@ -1,1 +1,1 @@
-export * from './NextcloudFileService';
+export * from './NextcloudFileService.js';

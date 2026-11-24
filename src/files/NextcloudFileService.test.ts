@@ -1,50 +1,60 @@
-import { NextcloudFileService } from './NextcloudFileService';
-import { NextcloudHeaderService } from '../shared/NextcloudHeaderService';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+  type MockInstance,
+} from 'vitest';
+import { NextcloudFileService } from './NextcloudFileService.js';
+import { NextcloudHeaderService } from '../shared/NextcloudHeaderService.js';
 import { createClient } from 'webdav';
 
-jest.mock('webdav', () => ({
+vi.mock('webdav', () => ({
   AuthType: { Password: 'password' },
-  createClient: jest.fn(),
+  createClient: vi.fn(),
 }));
 
 describe('NextcloudFileService', () => {
   let service: NextcloudFileService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
   let mockWebdavClient: {
-    putFileContents: jest.Mock;
-    getFileContents: jest.Mock;
-    createReadStream: jest.Mock;
-    getDirectoryContents: jest.Mock;
-    createDirectory: jest.Mock;
-    moveFile: jest.Mock;
-    deleteFile: jest.Mock;
+    putFileContents: Mock;
+    getFileContents: Mock;
+    createReadStream: Mock;
+    getDirectoryContents: Mock;
+    createDirectory: Mock;
+    moveFile: Mock;
+    deleteFile: Mock;
   };
 
   beforeEach(() => {
     mockWebdavClient = {
-      putFileContents: jest.fn().mockResolvedValue(true),
-      getFileContents: jest.fn().mockResolvedValue(Buffer.from('content')),
-      createReadStream: jest.fn().mockReturnValue({}),
-      getDirectoryContents: jest.fn().mockResolvedValue([]),
-      createDirectory: jest.fn().mockResolvedValue(undefined),
-      moveFile: jest.fn().mockResolvedValue(undefined),
-      deleteFile: jest.fn().mockResolvedValue(undefined),
+      putFileContents: vi.fn().mockResolvedValue(true),
+      getFileContents: vi.fn().mockResolvedValue(Buffer.from('content')),
+      createReadStream: vi.fn().mockReturnValue({}),
+      getDirectoryContents: vi.fn().mockResolvedValue([]),
+      createDirectory: vi.fn().mockResolvedValue(undefined),
+      moveFile: vi.fn().mockResolvedValue(undefined),
+      deleteFile: vi.fn().mockResolvedValue(undefined),
     };
-    (createClient as jest.Mock).mockReturnValue(mockWebdavClient);
+    (createClient as Mock).mockReturnValue(mockWebdavClient);
     service = new NextcloudFileService(
       'https://nc.example.com',
       'user',
       'pass',
       new NextcloudHeaderService(),
     );
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
     } as unknown as Response);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -252,7 +262,7 @@ describe('NextcloudFileService', () => {
 
   describe('stream', () => {
     it('returns readable stream from WebDAV', () => {
-      const mockStream = { pipe: jest.fn() };
+      const mockStream = { pipe: vi.fn() };
       mockWebdavClient.createReadStream.mockReturnValue(mockStream);
 
       const result = service.stream('/file.txt');

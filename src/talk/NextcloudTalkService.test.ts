@@ -1,18 +1,19 @@
-import { NextcloudTalkService } from './NextcloudTalkService';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { NextcloudTalkService } from './NextcloudTalkService.js';
 
 describe('NextcloudTalkService', () => {
   let service: NextcloudTalkService;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     service = new NextcloudTalkService('https://nc.example.com', 'user', 'pass');
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
     } as unknown as Response);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

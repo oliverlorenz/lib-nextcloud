@@ -1,1 +1,1 @@
-export * from './NextcloudTalkService';
+export * from './NextcloudTalkService.js';

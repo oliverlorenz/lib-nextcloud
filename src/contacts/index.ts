@@ -1,3 +1,3 @@
-export * from './NextcloudContact';
-export * from './NextcloudContactMapper';
-export * from './NextcloudContactService';
+export * from './NextcloudContact.js';
+export * from './NextcloudContactMapper.js';
+export * from './NextcloudContactService.js';

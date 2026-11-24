@@ -1,5 +1,5 @@
 import type { VCard4 } from 'vcard4-ts';
-import type { NextcloudContact } from './NextcloudContact';
+import type { NextcloudContact } from './NextcloudContact.js';
 
 export class NextcloudContactMapper {
   public mapContact(card: VCard4): NextcloudContact {

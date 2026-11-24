@@ -10,8 +10,22 @@ npm install @oliverlorenz/lib-nextcloud
 
 ## Requirements
 
-- Node.js >= 22
+- Node.js >= 22.12
 - A Nextcloud instance with an **App Password** (see [Authentication](#authentication))
+
+### Module format
+
+This package is published as native **ES modules** only (`"type": "module"`).
+
+```ts
+import { NextcloudFileService } from '@oliverlorenz/lib-nextcloud';
+```
+
+CommonJS projects can still load it with `require()` on Node.js >= 22.12, which supports `require()` of ES modules natively:
+
+```js
+const { NextcloudFileService } = require('@oliverlorenz/lib-nextcloud');
+```
 
 ## Authentication
 

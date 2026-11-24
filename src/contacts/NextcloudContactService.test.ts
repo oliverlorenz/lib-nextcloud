@@ -1,36 +1,46 @@
 import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+  type MockInstance,
+} from 'vitest';
+import {
   NextcloudContactService,
   NEXTCLOUD_CONTACT_DEFAULT_PROPERTIES,
-} from './NextcloudContactService';
-import { NextcloudContactMapper } from './NextcloudContactMapper';
-import type { NextcloudContact } from './NextcloudContact';
+} from './NextcloudContactService.js';
+import { NextcloudContactMapper } from './NextcloudContactMapper.js';
+import type { NextcloudContact } from './NextcloudContact.js';
 
-jest.mock('vcard4-ts', () => ({
-  parseVCards: jest.fn().mockReturnValue({ vCards: [] }),
+vi.mock('vcard4-ts', () => ({
+  parseVCards: vi.fn().mockReturnValue({ vCards: [] }),
 }));
 
 import { parseVCards } from 'vcard4-ts';
 
 describe('NextcloudContactService', () => {
   let service: NextcloudContactService;
-  let mockMapper: { mapContact: jest.Mock };
-  let fetchSpy: jest.SpyInstance;
+  let mockMapper: { mapContact: Mock };
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
-    mockMapper = { mapContact: jest.fn() };
+    mockMapper = { mapContact: vi.fn() };
     service = new NextcloudContactService(
       'https://nc.example.com',
       'user',
       'pass',
       mockMapper as unknown as NextcloudContactMapper,
     );
-    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       text: () => Promise.resolve('BEGIN:VCARD\nEND:VCARD'),
     } as unknown as Response);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -161,7 +171,7 @@ describe('NextcloudContactService', () => {
         phoneNumber: [],
       };
       mockFetchSequence(makePropfindXml([href]), makeMultigetXml([vCardText]));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [mockCard] });
       mockMapper.mapContact.mockReturnValue(mockContact);
 
       const result = await service.getContacts('contacts');
@@ -188,7 +198,7 @@ describe('NextcloudContactService', () => {
         phoneNumber: [],
       };
       mockFetchSequence(makePropfindXml([href]), makeMultigetXml([{ data: vCardText, href }]));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [mockCard] });
       mockMapper.mapContact.mockReturnValue(mockContact);
 
       await service.getContacts('contacts');
@@ -229,7 +239,7 @@ describe('NextcloudContactService', () => {
       const vCardWithEntities =
         'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD&#13;\n';
       mockFetchSequence(makePropfindXml([href]), makeMultigetXml([vCardWithEntities]));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [] });
 
       await service.getContacts('contacts');
 
@@ -337,7 +347,7 @@ describe('NextcloudContactService', () => {
       fetchSpy.mockResolvedValueOnce({
         text: () => Promise.resolve(makeMultigetXml([vCardText])),
       } as unknown as Response);
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [mockCard] });
       mockMapper.mapContact.mockReturnValueOnce(mockContact);
 
       const result = await service.getContactByUid('contacts', 'abc-123');
@@ -470,7 +480,7 @@ describe('NextcloudContactService', () => {
     it('returns undefined when parsed vCard list is empty', async () => {
       const vCardText = 'BEGIN:VCARD\nVERSION:4.0\nEND:VCARD';
       mockFetchXml(makeMultiStatusXml(vCardText));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [] });
 
       const result = await service.getContactByPhoneNumber('contacts', '+493333333333');
 
@@ -491,7 +501,7 @@ describe('NextcloudContactService', () => {
         phoneNumber: ['+493333333333'],
       };
       mockFetchXml(makeMultiStatusXml(vCardText));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [mockCard] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [mockCard] });
       mockMapper.mapContact.mockReturnValueOnce(mockContact);
 
       const result = await service.getContactByPhoneNumber('contacts', '+493333333333');
@@ -502,7 +512,7 @@ describe('NextcloudContactService', () => {
     it('passes extracted vCard text to parseVCards', async () => {
       const vCardText = 'BEGIN:VCARD\nVERSION:4.0\nFN:Test\nEND:VCARD';
       mockFetchXml(makeMultiStatusXml(vCardText));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [] });
 
       await service.getContactByPhoneNumber('contacts', '+493333333333');
 
@@ -513,7 +523,7 @@ describe('NextcloudContactService', () => {
       const vCardWithEntities =
         'BEGIN:VCARD&#13;\nVERSION:3.0&#13;\nFN:Max &amp; Moritz&#13;\nEND:VCARD&#13;\n';
       mockFetchXml(makeMultiStatusXml(vCardWithEntities));
-      (parseVCards as jest.Mock).mockReturnValueOnce({ vCards: [] });
+      (parseVCards as Mock).mockReturnValueOnce({ vCards: [] });
 
       await service.getContactByPhoneNumber('contacts', '+493333333333');
 
@@ -672,7 +682,7 @@ describe('NextcloudContactService', () => {
         phoneNumber: [],
       };
       mockFetchXml(makeMultiStatusXml([vCardText1, vCardText2]));
-      (parseVCards as jest.Mock)
+      (parseVCards as Mock)
         .mockReturnValueOnce({ vCards: [mockCard1] })
         .mockReturnValueOnce({ vCards: [mockCard2] });
       mockMapper.mapContact.mockReturnValueOnce(mockContact1).mockReturnValueOnce(mockContact2);
