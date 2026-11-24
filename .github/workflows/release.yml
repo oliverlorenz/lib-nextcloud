@@ -35,11 +35,10 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           cache: 'npm'
 
-      - name: Configure npm to use GitHub Package Registry
-        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
-
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release
         run: npx semantic-release
