@@ -28,7 +28,9 @@ Git hooks: pre-commit runs `test`; pre-push runs `lint:eslint && lint:prettier &
 
 Releases are fully automated via `semantic-release`. No manual steps required after merging.
 
-**The PR title is the release signal.** Because all PRs are squash-merged, the PR title becomes the commit message on `main`. `semantic-release` reads these commits to determine the version bump, generate `CHANGELOG.md`, create the GitHub Release, and publish to GitHub Packages.
+**The PR title is the release signal.** Because all PRs are squash-merged, the PR title becomes the commit message on `main`. `semantic-release` reads these commits to determine the version bump, create the GitHub Release (with release notes), and publish to GitHub Packages. It never commits back to `main`.
+
+Release runs after every successful CI run on `main`, daily at 05:00 UTC (to pick up auto-merged Dependabot updates, whose merges do not trigger workflows), and on manual dispatch.
 
 | PR title prefix | Version bump | In release notes |
 | --- | --- | --- |
@@ -47,9 +49,14 @@ Releases are fully automated via `semantic-release`. No manual steps required af
 
 **Do not:**
 
-- Create `chore(release): …` commits manually — those are written back by `semantic-release`
-- Bump the version in `package.json` manually — `semantic-release` owns the version
-- Edit `CHANGELOG.md` manually — it is auto-generated
+- Change the `version` in `package.json` — it stays `0.0.0-semantically-released`; `semantic-release` sets the real version only in the published package
+- Add release notes to `CHANGELOG.md` — it is frozen at v3.0.0; release notes live in GitHub Releases
+
+## Dependency updates
+
+Dependabot opens grouped PRs weekly, waiting 5 days (`cooldown`) before adopting a new version. Runtime dependencies get `fix(deps): …` (→ patch release), dev dependencies `chore(deps): …`, GitHub Actions `ci(deps): …` (no release). Patch and minor updates are auto-merged once the required checks pass; majors need a manual review.
+
+Required checks on `main` (ruleset): `CI result` (aggregates all CI jobs, path-filtered jobs count as passed when skipped) and `Validate PR title`. Actions are pinned to commit SHAs; Dependabot keeps them up to date.
 
 ## Domain structure (DDD-inspired)
 
