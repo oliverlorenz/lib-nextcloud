@@ -1,3 +1,5 @@
+## [3.0.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v2.7.0...v3.0.0) (2026-11-24)
+
 ## [2.2.0](https://github.com/oliverlorenz/lib-nextcloud/compare/v2.1.0...v2.2.0) (2026-06-01)
 
 ### Features

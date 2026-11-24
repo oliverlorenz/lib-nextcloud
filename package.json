@@ -1,6 +1,6 @@
 {
   "name": "@oliverlorenz/lib-nextcloud",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "type": "module",
   "types": "dist/index.d.ts",
   "exports": {
